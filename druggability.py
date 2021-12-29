@@ -60,7 +60,7 @@ load_oncokb_therapeutics( Evidence, Variants, Genes )
 
 
 if args.variation_type == 'maf':
-    process_maf( args.variant_file, Evidence, Variants, Genes)
+    process_maf( args, Evidence, Variants, Genes)
 
 if args.variation_type == 'fusion':
-    process_fusions( args.variant_file, Evidence, Variants, Genes)
+    process_fusions( args, Evidence, Variants, Genes)

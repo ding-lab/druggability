@@ -7,8 +7,9 @@ from utils import *
 
 DEBUG=config.DEBUG
 
-def process_maf( inputFile, Evidence, Variants, Genes):
+def process_maf( args, Evidence, Variants, Genes):
 
+    inputFile = args.variant_file
     Variant_sample_tracking = dict()   # record which samples have which variants
 
     tsv_file = open( inputFile )
