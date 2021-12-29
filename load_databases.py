@@ -3,6 +3,7 @@
 
 import csv, re
 import config
+from utils import *
 
 DEBUG=config.DEBUG
 
@@ -26,10 +27,19 @@ def load_civic(Variants, Genes, VariantAliases):
         gene = fields[2]
 
         variant_id = 'civic:' + fields[0]
+
+        # Screen input and categorize variant
+        tmp_variant_types_list = fields[19].split(',')
+
+        # Current: keep simple variants not involved in fusions
+        if 'missense_variant' in tmp_variant_types_list:
+            if len(intersection( tmp_variant_types_list,  ['transcript_fusion'])) > 0:
+                continue
+
         Variants[variant_id] = {
             'gene':               gene,
             'variant':            fields[ 4],
-            'variant_types_list': fields[19].split(','),
+            'variant_types_list': tmp_variant_types_list,
             'chrom' :             fields[ 7],
             'pos0' :              fields[ 8],
             'pos1' :              fields[ 9],
@@ -146,7 +156,8 @@ def load_civic_evidence( Evidence, Variants ):
             Evidence[evidence_id]['citations'].append( {'source': 'ASCO',     'citation_id': fields[15]} )
 
         # Crosslink tables
-        Variants[variant_id]['evidence_list'].append( evidence_id )
+        if variant_id in Variants:
+            Variants[variant_id]['evidence_list'].append( evidence_id )
 
     tsv_file.close()
 

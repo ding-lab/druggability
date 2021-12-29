@@ -48,3 +48,6 @@ def print_sample_header( sample, alteration ):
     print( '\t'.join([ '### Hugo_Symbol', 'Chromosome', 'Start_Position', 'AA_change', 'Variant_Type']))
     print( '### ' + alteration )
     print_thick_line()
+
+def intersection( lst1, lst2 ):
+    return list( set(lst1)  &  set(lst2) )
