@@ -4,6 +4,7 @@
 import csv, re
 import config
 from utils import *
+from harmonize import *
 
 DEBUG=config.DEBUG
 
@@ -15,6 +16,7 @@ def load_civic(Variants, Genes, VariantAliases):
     hdr_civic_variants = []    # field names
 
     num_vars_read=0
+    num_vars_ignored=0
 
     for row in read_tsv:
         fields = [ s.strip() for s in row ]
@@ -24,21 +26,40 @@ def load_civic(Variants, Genes, VariantAliases):
             continue
 
         num_vars_read += 1
-        gene = fields[2]
-
         variant_id = 'civic:' + fields[0]
+        gene = fields[2]
+        my_variant = fields[4]
+        ignore_status = False
 
-        # Screen input and categorize variant
+        # Determine whether to ignore the alteration
+        if my_variant.lower() in ['phosphorylation', 'mutation', 'underexpression', 'overexpression', 'amplification', 'copy number variation']   or \
+           re.search(r'transcript_ablation', fields[19]) or \
+           re.search(r'exon', my_variant.lower(), re.IGNORECASE):
+            ignore_status = True
+        if ignore_status == True:
+            num_vars_ignored += 1
+            if DEBUG:
+                print(' '.join( ['# IGNORED:'] + list( fields[x] for x in (2,4,19) ) ))
+            continue
+
+        # Harmonize and categorize variant
+        my_variant = harmonize_variant( gene, my_variant, 'civic')
+        our_variant_category = 'undeclared'
         tmp_variant_types_list = fields[19].split(',')
+        if len(intersection( tmp_variant_types_list,  ['transcript_fusion','gene_fusion'])) > 0:
+            our_variant_category = 'fusion'
+        else:
+            our_variant_category = 'mutation'
 
-        # Current: keep simple variants not involved in fusions
-        if 'missense_variant' in tmp_variant_types_list:
-            if len(intersection( tmp_variant_types_list,  ['transcript_fusion'])) > 0:
-                continue
 
+        # Accepted variant
+        if DEBUG:
+            print(' '.join( ['# Accepted:', variant_id, gene, my_variant, our_variant_category]))
+
+            # Store variant
         Variants[variant_id] = {
             'gene':               gene,
-            'variant':            fields[ 4],
+            'variant':            my_variant,
             'variant_types_list': tmp_variant_types_list,
             'chrom' :             fields[ 7],
             'pos0' :              fields[ 8],
@@ -47,6 +68,7 @@ def load_civic(Variants, Genes, VariantAliases):
             'ref_build' :         fields[14],
             'variant_aliases':    fields[25],
             'evidence_list':      [],
+            'our_variant_category': our_variant_category,
         }
 
         # Add variant to list for its gene
@@ -69,6 +91,8 @@ def load_civic(Variants, Genes, VariantAliases):
     tsv_file.close()
     if DEBUG:
         print('# num civic variant records read: ' + str(num_vars_read))
+        print('# num civic variant records ignored: ' + str(num_vars_ignored))
+    print( Variants.keys() )
 
 
 
@@ -90,11 +114,20 @@ def load_oncokb(Variants, Genes, VariantAliases):
 
         num_vars_read += 1
         gene = fields[0]
+        variant = fields[1]
 
         variant_id = 'oncokb:' + str(num_vars_read)
+
+        # Our labeling of variants
+        our_variant_category = 'undeclared'
+        if re.search( r'fusion', variant, re.IGNORECASE):
+            our_variant_category = 'fusion'
+        else:
+            our_variant_category = 'mutation'
+
         Variants[variant_id] = {
             'gene':               gene,
-            'variant':            fields[ 1],
+            'variant':            variant,
             'variant_types_list': '',
             'chrom' :             '',
             'pos0' :              '',
@@ -102,8 +135,8 @@ def load_oncokb(Variants, Genes, VariantAliases):
             'ensemble_version' :  '',
             'ref_build' :         '',
             'variant_aliases':    '',
-
             'evidence_list':      [],
+            'our_variant_category': our_variant_category,
         }
 
         # Add variant to list for its gene
@@ -163,6 +196,7 @@ def load_civic_evidence( Evidence, Variants ):
 
 
 def load_oncokb_evidence( Evidence, Variants ):
+    # Reopen alterations file to load more data
     tsv_file = open( config.oncokb_files['variants'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     hdr_oncokb_evidence = []    # field names
@@ -196,8 +230,9 @@ def load_oncokb_evidence( Evidence, Variants ):
             'citations':                   [],
             }
 
-        # Crosslink tables
-        Variants[variant_id]['evidence_list'].append( evidence_id )
+        # Crosslink tables if alteration was accepted originally
+        if variant_id in Variants:
+            Variants[variant_id]['evidence_list'].append( evidence_id )
 
     tsv_file.close()
 
