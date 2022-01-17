@@ -10,7 +10,7 @@ DEBUG=config.DEBUG
 def process_maf( args, Evidence, Variants, Genes):
 
     inputFile = args.variant_file
-    Variant_sample_tracking = dict()   # record which samples have which variants
+    Variant_tracking = dict()   # record which samples have which variants
 
     tsv_file = open( inputFile )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
@@ -62,12 +62,12 @@ def process_maf( args, Evidence, Variants, Genes):
             known_variants.extend( existing_variation_list_string.split(','))
         if maf_variant_id != '.':
             known_variants.extend( maf_variant_id.split(','))
-        known_variants = list(set( known_variants ))
+        known_variants = uniquify(  known_variants )
 
         # Set up storage for tracking matches
-        if sample not in Variant_sample_tracking.keys():
-            Variant_sample_tracking[ sample ] = dict()
-        Variant_sample_tracking[ sample ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
+        if sample not in Variant_tracking.keys():
+            Variant_tracking[ sample ] = dict()
+        Variant_tracking[ sample ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
 
 
 
@@ -80,8 +80,8 @@ def process_maf( args, Evidence, Variants, Genes):
                 num_v_id_matched += 1
                 #if DEBUG:
                 #   print("Matched on (v_id, variant) = " + v_id + "," +  Variants[v_id]['variant'])
-                Variant_sample_tracking[sample][alteration_summary]['v_id_list'].append( v_id )
-                Variant_sample_tracking[sample][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
+                Variant_tracking[sample][alteration_summary]['v_id_list'].append( v_id )
+                Variant_tracking[sample][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
             else:
                 num_v_id_not_matched += 1
 
@@ -95,16 +95,4 @@ def process_maf( args, Evidence, Variants, Genes):
 
 
     # Print summary
-    for sample in Variant_sample_tracking.keys():
-        for alteration in Variant_sample_tracking[sample].keys():
-            this_alt = Variant_sample_tracking[sample][alteration]
-            if this_alt['total_evidence_count']:
-                print_sample_header( sample, alteration )
-                print_output_header()
-                for v_id in this_alt['v_id_list']:
-                    for ev_id in Variants[v_id]['evidence_list']:
-                        t = Evidence[ev_id]
-                        print( *[ (v_id.split(':'))[0],   Variants[v_id]['variant'], t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], t['evidence_level'], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
-
-                print('')
-                print('')
+    print_summary_by_sample( Variant_tracking, Variants, Evidence )
