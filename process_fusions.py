@@ -78,6 +78,7 @@ def process_fusions( args, Evidence, Variants, Genes):
                     if  Variants[v_id]['main_variant_class'] == FUSION:
 
                         # Determine full vs partial gene match (wildcard gene is handled implicitly)
+                        myoverlap = intersection( genes, Variants[v_id]['fusion_gene_set'] )
                         num_hits = len( intersection( genes, Variants[v_id]['fusion_gene_set'] ) )
                         if num_hits == 2:
 
@@ -87,7 +88,7 @@ def process_fusions( args, Evidence, Variants, Genes):
                                 list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': Variants[v_id]['pp_condition2_value']} )
 
                         elif num_hits == 1:
-                            list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '1 gene matched'} )
+                            list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': 'matched ' + str(myoverlap[0])} )
                         else:
                             pass
 
