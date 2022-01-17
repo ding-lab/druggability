@@ -3,7 +3,7 @@
 ## Requirements
 - python3 environment
 - Installed repositories
-- variant file (i.e., MAF)
+- variant file (single or multisample MAF or fusion output)
 
 ## Installation
 - `git clone https://github.com/ding-lab/druggability.git`
@@ -27,5 +27,5 @@ required arguments:
 Example:
 ```
 ./druggability.py  -t maf  -f LUAD.Somatic.050919.mnp.annot.maf   > out
+./druggability.py  -t fusion -f CPTAC_fusions_v0.1.csv.tsv > out
 ```
-**NOTE:** Fusions are a work-in-progress.
