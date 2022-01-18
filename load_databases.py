@@ -40,7 +40,7 @@ def load_civic(Variants, Genes, VariantAliases):
                 print(' '.join( ['# preprocessed IGNORED:', variant_id, fields[1],variant,variant_types_str] ) )
             continue
 
-        if re.search(r'amplification|copy number|exon|expression|loss|microsatellite|mutation|nuclear|phosphorylation|promoter|splice|tandem|truncating|wildtype', variant.lower(), re.IGNORECASE):
+        if re.search(r'amplification|copy number|exon|expression|loss|microsatellite|mutation|nuclear|phosphorylation|promoter|splice|tandem|truncating|wildtype|domain', variant.lower(), re.IGNORECASE):
             num_vars_ignored += 1
             if DEBUG_2:
                 print(' '.join( ['# preprocessed IGNORED(variant name):', variant_id, fields[1],variant,variant_types_str] ) )
@@ -49,6 +49,7 @@ def load_civic(Variants, Genes, VariantAliases):
         # Classify variant
         main_variant_class = UNDECLARED
         fusion_gene_set = []
+        x0, x1 = [0, 0]
 
         vartypes_list = [ s.strip() for s in variant_types_str.split(',') ]
 
@@ -66,6 +67,13 @@ def load_civic(Variants, Genes, VariantAliases):
         else:
             main_variant_class = MUTATION
 
+            # Find position range (integral values)
+            x0, x1 = get_pos_range( variant )
+
+        if DEBUG_2:
+            print( '# (civic) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
+
+        # Instantiate record
         Variants[variant_id] = {
             'gene'                : fields[ 1],
             'variant'             : variant,
@@ -87,6 +95,9 @@ def load_civic(Variants, Genes, VariantAliases):
             'ref_build'           : '',
             'variant_aliases'     : '',
             'evidence_list'       : [],
+
+            'prot_ref_start_pos'  : x0,  # start, end positions in protein target by maf mutation
+            'prot_ref_end_pos'    : x1,
         }
 
     tsv_file.close()
@@ -95,7 +106,7 @@ def load_civic(Variants, Genes, VariantAliases):
         print('# num preprocessed civic variant records ignored: ' + str(num_vars_ignored))
 
 
-    # Load native file
+    # Load native file to get more information
     tsv_file = open( config.civic_files['variants'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
@@ -122,7 +133,7 @@ def load_civic(Variants, Genes, VariantAliases):
         if DEBUG_2:
             print(' '.join( ['# Accepted:', variant_id, fields[1] + ' as ' + Variants[variant_id]['gene'], fields[3]] ) )
 
-        # Update variant information, including with original data
+        # Update information
         Variants[variant_id].update({
             'chrom'            : fields[ 7],
             'pos0'             : fields[ 8],
@@ -186,6 +197,8 @@ def load_oncokb(Variants, Genes, VariantAliases):
         # Classify variant
         main_variant_class = UNDECLARED
         fusion_gene_set = []
+        x0, x1 = [0, 0]
+
         if re.search( r'fusion', variant, re.IGNORECASE):
             main_variant_class = FUSION
 
@@ -201,10 +214,20 @@ def load_oncokb(Variants, Genes, VariantAliases):
         else:
             main_variant_class = MUTATION
 
+            # Handle exceptions
+            if gene in ['EGFR']  and  re.search(r'v[IVX]{1,}', variant):    # exonic isoform
+                num_vars_ignored += 1
+                continue
+
+            # Find position range (integral values)
+            x0, x1 = get_pos_range( variant )
+
         if DEBUG_2:
             print(' '.join( ['# oncokb variant ALLOWED:', variant_id, gene, variant, 'class='+str(main_variant_class)] ) )
+            print( '# (oncokb) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
 
 
+        # Instantiate record
         Variants[variant_id] = {
             'gene'                : gene,
             'variant'             : variant,
@@ -226,6 +249,9 @@ def load_oncokb(Variants, Genes, VariantAliases):
             'ref_build'           : '',
             'variant_aliases'     : '',
             'evidence_list'       : [],
+
+            'prot_ref_start_pos'  : x0,  # start, end positions in protein target by maf mutation
+            'prot_ref_end_pos'    : x1,
         }
 
         # Add variant to list for its gene
@@ -235,8 +261,8 @@ def load_oncokb(Variants, Genes, VariantAliases):
 
     tsv_file.close()
     if DEBUG:
-        print('# num oncokb variant records read (initial pass): ' + str(num_vars_read))
-        print('# num oncokb variant records ignored (initial pass): ' + str(num_vars_ignored))
+        print('# num oncokb variant records read (initial pass): %s' %  (num_vars_read))
+        print('# num oncokb variant records ignored (initial pass): %s' % (num_vars_ignored))
 
 
 def load_civic_evidence( Evidence, Variants ):
@@ -332,8 +358,8 @@ def load_oncokb_evidence( Evidence, Variants ):
 
     tsv_file.close()
     if DEBUG:
-        print('# num oncokb variant records read (second pass): ' + str(num_vars_read))
-        print('# num oncokb variant records ignored (second pass): ' + str(num_vars_ignored))
+        print('# num oncokb variant records read (second pass): %s' % (num_vars_read))
+        print('# num oncokb variant records ignored (second pass): %s' % (num_vars_ignored))
 
 
 def load_oncokb_therapeutics(Evidence, Variants, Genes):

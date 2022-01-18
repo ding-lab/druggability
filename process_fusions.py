@@ -83,12 +83,12 @@ def process_fusions( args, Evidence, Variants, Genes):
                         if num_hits == 2:
 
                             if Variants[v_id]['pp_conditions'] == 1:   # no additional criteria
-                                list_append( Matches[ Sample ]['full'], {'v_id': v_id, 'reason': '-'} )   # unchecked criteria
+                                list_append( Matches[ Sample ]['full'], {'v_id': v_id, 'reason': '-', 'called': FusionName} )   # unchecked criteria
                             else:
-                                list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': Variants[v_id]['pp_condition2_value']} )
+                                list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': Variants[v_id]['pp_condition2_value'], 'called': FusionName} )
 
                         elif num_hits == 1:
-                            list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': 'matched ' + str(myoverlap[0])} )
+                            list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': 'matched ' + str(myoverlap[0]), 'called': FusionName} )
                         else:
                             pass
 

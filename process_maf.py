@@ -4,13 +4,17 @@
 import os, sys, csv, re
 import config
 from utils import *
+from enums import *
+from harmonize import *
 
 DEBUG=config.DEBUG
+DEBUG_2=config.DEBUG_2
 
 def process_maf( args, Evidence, Variants, Genes):
 
     inputFile = args.variant_file
     Variant_tracking = dict()   # record which samples have which variants
+    Matches          = dict()   # matches by sample, separated in 'full' and 'partial' match lists
 
     tsv_file = open( inputFile )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
@@ -31,25 +35,22 @@ def process_maf( args, Evidence, Variants, Genes):
         aachange     = fields[36]
         csq          = fields[50]
 
-        # ##################################################
-        # initially look at only vars with AA change
-
-        if not re.search( r'^p\.', aachange):
-            continue
-
-        aachange = aachange.replace('p.','')
-        # ##################################################
 
         # Check whether this gene is mentioned in any database
-        num_var_entries_for_gene_in_db = len(Genes[hugo]) if hugo in Genes.keys() else 0
-        #if DEBUG:
-        #    print( "Gene, num var entries for gene in db: " +  hugo + ', ' + str(num_var_entries_for_gene_in_db))
-        if not num_var_entries_for_gene_in_db:
+        if hugo not in Genes.keys():
             continue
 
         # summarize alteration
         alteration_summary = '\t'.join([ hugo, chrom, pos_start, aachange, vartype ])
 
+        # initially look at only vars with AA change in HGVS short format; if blank, it is often a splice site
+        if not re.search( r'^p\.', aachange):
+            if DEBUG_2:
+                print( '# maf record IGNORED: ' + alteration_summary )
+            continue
+
+        # harmonize
+        aachange = harmonize_maf( aachange )
 
         # Merge lists of reported aliases
         dbSNP_RS                       = fields[ 13]  #rs#, list of rs#s, or novel
@@ -69,30 +70,34 @@ def process_maf( args, Evidence, Variants, Genes):
             Variant_tracking[ sample ] = dict()
         Variant_tracking[ sample ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
 
-
+        if sample not in Matches.keys():
+            Matches[ sample ] = {'full': [], 'partial': []}
 
         # Identify and track matches
-        num_v_id_matched     = 0
-        num_v_id_not_matched = 0
+        num_full_matches    = 0
+        num_partial_matches = 0
+        num_unmatched       = 0
 
         for v_id in Genes[hugo]:
-            if is_exact_aa_match( aachange, v_id, Variants ) or is_pattern_aa_match( aachange, v_id, Variants):   # FIXME: false positives possible
-                num_v_id_matched += 1
-                #if DEBUG:
-                #   print("Matched on (v_id, variant) = " + v_id + "," +  Variants[v_id]['variant'])
+
+            if is_exact_match( aachange, v_id, Variants ):
+                list_append( Matches[ sample ]['full'], {'v_id': v_id, 'reason': '-', 'called': hugo+' '+aachange} )
                 Variant_tracking[sample][alteration_summary]['v_id_list'].append( v_id )
                 Variant_tracking[sample][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
-            else:
-                num_v_id_not_matched += 1
+                continue
 
-        #if num_v_id_matched > 0:
-            #if DEBUG:
-            #print('Summary: matched %s / not matched = %s of %s variants' % ( num_v_id_matched, num_v_id_not_matched, num_var_entries_for_gene_in_db))
-            #print('')
+            if Variants[v_id]['main_variant_class'] == MUTATION:
+                if Variants[v_id]['prot_ref_start_pos'] > 0:
+                    if get_overlap_length( aachange, v_id, Variants ) > 0:
+                        list_append( Matches[ sample ]['partial'], {'v_id': v_id, 'reason': 'has_overlap', 'called': hugo+' '+aachange} )
+                        Variant_tracking[sample][alteration_summary]['v_id_list'].append( v_id )
+                        Variant_tracking[sample][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
+                        continue
 
     tsv_file.close()
 
 
-
     # Print summary
-    print_summary_by_sample( Variant_tracking, Variants, Evidence )
+    #print_summary_by_sample( Variant_tracking, Variants, Evidence )
+
+    print_summary_for_all( Matches, Variants, Evidence )
