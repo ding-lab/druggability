@@ -63,9 +63,6 @@ def process_fusions( args, Evidence, Variants, Genes):
             Variant_tracking[ Sample ] = dict()
         Variant_tracking[ Sample ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
 
-        if Sample not in Matches.keys():
-            Matches[ Sample ] = {'full': [], 'partial': []}
-
         # Gather gene names
         genes = []
         for g in FusionName.split('--'):
@@ -83,11 +80,14 @@ def process_fusions( args, Evidence, Variants, Genes):
                         if num_hits == 2:
 
                             if Variants[v_id]['pp_conditions'] == 1:   # no additional criteria
+                                check_alloc_match( Matches, Sample )
                                 list_append( Matches[ Sample ]['full'], {'v_id': v_id, 'reason': '-', 'called': FusionName} )   # unchecked criteria
                             else:
+                                check_alloc_match( Matches, Sample )
                                 list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': Variants[v_id]['pp_condition2_value'], 'called': FusionName} )
 
                         elif num_hits == 1:
+                            check_alloc_match( Matches, Sample )
                             list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': 'matched ' + str(myoverlap[0]), 'called': FusionName} )
                         else:
                             pass
@@ -101,4 +101,4 @@ def process_fusions( args, Evidence, Variants, Genes):
     # Print summary by sample
     # print_summary_by_sample( Variant_tracking, Variants, Evidence )
 
-    print_summary_for_all( Matches, Variants, Evidence )
+    print_summary_for_all( Matches, Variants, Evidence, args )

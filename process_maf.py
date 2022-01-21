@@ -19,6 +19,7 @@ def process_maf( args, Evidence, Variants, Genes):
     inputFile = args.variant_file
     Variant_tracking = dict()   # record which samples have which variants
     Matches          = dict()   # matches by sample, separated in 'full' and 'partial' match lists
+    maf_filetype     = UNDECLARED
 
     tsv_file = open( inputFile )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
@@ -76,9 +77,6 @@ def process_maf( args, Evidence, Variants, Genes):
             Variant_tracking[ sample_pair ] = dict()
         Variant_tracking[ sample_pair ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
 
-        if sample_pair not in Matches.keys():
-            Matches[ sample_pair ] = {'full': [], 'partial': []}
-
         # Identify and track matches
         num_full_matches    = 0
         num_partial_matches = 0
@@ -87,6 +85,7 @@ def process_maf( args, Evidence, Variants, Genes):
         for v_id in Genes[hugo]:
 
             if is_exact_match( aachange, v_id, Variants ):
+                check_alloc_match( Matches, sample_pair )
                 list_append( Matches[ sample_pair ]['full'], {'v_id': v_id, 'reason': '-', 'called': hugo+' '+aachange} )
                 Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
                 Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
@@ -95,6 +94,7 @@ def process_maf( args, Evidence, Variants, Genes):
             if Variants[v_id]['main_variant_class'] == MUTATION:
                 if Variants[v_id]['prot_ref_start_pos'] > 0:
                     if get_overlap_length( aachange, v_id, Variants ) > 0:
+                        check_alloc_match( Matches, sample_pair )
                         list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': 'has_overlap', 'called': hugo+' '+aachange} )
                         Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
                         Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
@@ -106,4 +106,4 @@ def process_maf( args, Evidence, Variants, Genes):
     # Print summary
     #print_summary_by_sample( Variant_tracking, Variants, Evidence )
 
-    print_summary_for_all( Matches, Variants, Evidence )
+    print_summary_for_all( Matches, Variants, Evidence, args )

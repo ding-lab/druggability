@@ -37,6 +37,11 @@ def is_pattern_aa_match( aachange, v_id, Variants ):
     else:
         return False
 
+def check_alloc_match( Matches, key ):
+    if key not in Matches.keys():
+        Matches[ key ] = {'full': [], 'partial': []}
+    return
+
 def format_citations( mylist ):
     result_list = []
     if len(mylist):
@@ -64,6 +69,12 @@ def print_output_header():
 def print_output_header_2():
     print_thin_line()
     print( '\t'.join([ '#Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'Matched_Alteration', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+           'Evidence_Level', 'Clinical_Significance',  'Citation']) )
+    print_thin_line()
+
+def print_output_header_3():
+    print_thin_line()
+    print( '\t'.join([ '#Sample', 'Match_Index', 'Called',  'Matched_Alteration', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
     print_thin_line()
 
@@ -147,8 +158,11 @@ def print_summary_by_sample( Variant_tracking, Variants, Evidence ):
                     print('')
 
 
-def print_summary_for_all( Matches, Variants, Evidence ):
+def print_summary_for_all( Matches, Variants, Evidence, args ):
     bPrintHeader = True
+    if not Matches:
+        print("No matches found!")
+        return
     for s in Matches:
         match_idx = 0
         for matchtype in ['full', 'partial']:
@@ -161,6 +175,18 @@ def print_summary_for_all( Matches, Variants, Evidence ):
                         t = Evidence[ev_id]
                         match_idx += 1
                         if bPrintHeader:
-                            print_output_header_2()
+                            if args.variation_type == 'maf':
+                                print_output_header_2()
+                            elif args.variation_type == 'fusion':
+                                print_output_header_3()
+                            else:
+                                print('#ERROR: unknown variant filetype for printing')
+                                sys.exit(1)
                             bPrintHeader = False
-                        print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], t['evidence_level'], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                        if args.variation_type == 'maf':
+                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], t['evidence_level'], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+
+                        elif args.variation_type == 'fusion':
+                            print( *[ s, match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], t['evidence_level'], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                        else:
+                            pass
