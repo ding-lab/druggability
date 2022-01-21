@@ -10,6 +10,10 @@ from harmonize import *
 DEBUG=config.DEBUG
 DEBUG_2=config.DEBUG_2
 
+# accommodate large strings
+csv.field_size_limit( 131072 * 82 )
+
+
 def process_maf( args, Evidence, Variants, Genes):
 
     inputFile = args.variant_file
