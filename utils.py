@@ -63,7 +63,7 @@ def print_output_header():
 
 def print_output_header_2():
     print_thin_line()
-    print( '\t'.join([ '#Sample', 'Match_Index', 'Called',  'Matched_Alteration', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ '#Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'Matched_Alteration', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
     print_thin_line()
 
@@ -163,4 +163,4 @@ def print_summary_for_all( Matches, Variants, Evidence ):
                         if bPrintHeader:
                             print_output_header_2()
                             bPrintHeader = False
-                        print( *[ s, match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], t['evidence_level'], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                        print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], t['evidence_level'], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')

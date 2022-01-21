@@ -35,7 +35,8 @@ def process_maf( args, Evidence, Variants, Genes):
         pos_start    = fields[ 5]
         pos_end      = fields[ 6]
         vartype      = fields[ 9]   # SNP, INS, DEL, ...
-        sample       = fields[15]   # here, this is tumor sample
+        sample_t     = fields[15]   # here, this is tumor sample
+        sample_n     = fields[16]   # here, this is (matched) normal sample
         aachange     = fields[36]
         csq          = fields[50]
 
@@ -69,13 +70,14 @@ def process_maf( args, Evidence, Variants, Genes):
             known_variants.extend( maf_variant_id.split(','))
         known_variants = uniquify(  known_variants )
 
-        # Set up storage for tracking matches
-        if sample not in Variant_tracking.keys():
-            Variant_tracking[ sample ] = dict()
-        Variant_tracking[ sample ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
+        # Set up storage for tracking matches using composite key
+        sample_pair = sample_t + '||' + sample_n
+        if sample_pair not in Variant_tracking.keys():
+            Variant_tracking[ sample_pair ] = dict()
+        Variant_tracking[ sample_pair ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
 
-        if sample not in Matches.keys():
-            Matches[ sample ] = {'full': [], 'partial': []}
+        if sample_pair not in Matches.keys():
+            Matches[ sample_pair ] = {'full': [], 'partial': []}
 
         # Identify and track matches
         num_full_matches    = 0
@@ -85,17 +87,17 @@ def process_maf( args, Evidence, Variants, Genes):
         for v_id in Genes[hugo]:
 
             if is_exact_match( aachange, v_id, Variants ):
-                list_append( Matches[ sample ]['full'], {'v_id': v_id, 'reason': '-', 'called': hugo+' '+aachange} )
-                Variant_tracking[sample][alteration_summary]['v_id_list'].append( v_id )
-                Variant_tracking[sample][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
+                list_append( Matches[ sample_pair ]['full'], {'v_id': v_id, 'reason': '-', 'called': hugo+' '+aachange} )
+                Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
+                Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
                 continue
 
             if Variants[v_id]['main_variant_class'] == MUTATION:
                 if Variants[v_id]['prot_ref_start_pos'] > 0:
                     if get_overlap_length( aachange, v_id, Variants ) > 0:
-                        list_append( Matches[ sample ]['partial'], {'v_id': v_id, 'reason': 'has_overlap', 'called': hugo+' '+aachange} )
-                        Variant_tracking[sample][alteration_summary]['v_id_list'].append( v_id )
-                        Variant_tracking[sample][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
+                        list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': 'has_overlap', 'called': hugo+' '+aachange} )
+                        Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
+                        Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
                         continue
 
     tsv_file.close()
