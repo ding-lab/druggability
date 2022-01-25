@@ -2,10 +2,13 @@
 # R. Jay Mashl <rmashl@wustl.edu>
 
 import re
+import config
+from enums import *
+
+DEBUG_2=config.DEBUG_2
 
 # Harmonize, given gene g and variant v from source src
 def harmonize_maf( myvar ):
-
     muts = myvar.split(';')   # in case of MNPs
     outlist = []
     for m in muts:
@@ -15,9 +18,41 @@ def harmonize_maf( myvar ):
         outlist.append( tmp )
     return str(';'.join( outlist ))
 
+
 def fix_synonymous( myvar ):
     m = re.search(r'([A-Y])(\d+)=$', myvar)
     if m is not None:
         return ''.join([ m[1], m[2], m[1] ])
     else:
         print('# ERROR: unexpected synonymous variant format')
+
+
+def harmonize_maf_2( myvar ):
+    '''
+    Addition round of reformatting due to non-HGVS convention.
+    In particular, position ranges do not include the single-letter amino acids.
+    We can fix 'delins' variants, which come denoted  as '>', and some insertions we've seen include *{aa} and **.
+    '''
+    if re.search(r'>', myvar):
+        a = myvar.split('>')
+        if len(a) != 2:
+            print('ERROR: unexpected split of delins variant %s in union maf' % ( myvar ))
+            return myvar
+        ins_aa = a[1]
+
+        b = a[0].split('_')
+        if len(b) != 2:
+            print('ERROR: no range reported in delins variant %s in union maf' % ( myvar ))
+            return myvar
+        start_pos  = b[0]
+        c          = re.search(r'^(\d+)([A-Y]{2,})$', b[1])
+        end_pos    = c[1]
+        ref_aa_str = c[2]
+        start_aa   = ref_aa_str[ 0]
+        end_aa     = ref_aa_str[-1]
+
+        new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'delins' + ins_aa
+        if DEBUG_2:
+            print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
+        return new_myvar
+
