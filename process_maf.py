@@ -31,11 +31,11 @@ def process_maf( args, Evidence, Variants, Genes):
         if bReadHeader:
             if row[0] != 'Hugo_Symbol':
                 continue
-            if ['Chromosome', 'Start_Position', 'End_Position', 'Variant_Type', 'Tumor_Sample_Barcode', 'Matched_Norm_Sample_Barcode', 'HGVSp_Short', 'Feature_type'] == [ fields[x] for x in [4,5,6,9,15,16,36,50] ]:
+            if ['Chromosome', 'Start_Position', 'End_Position', 'Variant_Type', 'Tumor_Sample_Barcode', 'Matched_Norm_Sample_Barcode', 'HGVSp_Short'] == [ fields[x] for x in [4,5,6,9,15,16,36] ]:
                 maf_filetype = WASHU_MAF
                 bReadHeader = False
                 continue
-            elif ['Chromosome', 'Start_Position', 'End_Position', 'Variant_Type', 'Tumor_Sample_Barcode', 'Matched_Norm_Sample_Barcode', 'Protein_Change', 'Other_Transcripts'] == [ fields[x] for x in [3,4,5,8,12,13,26,27] ]:
+            elif ['Chromosome', 'Start_Position', 'End_Position', 'Variant_Type', 'Tumor_Sample_Barcode', 'Matched_Norm_Sample_Barcode', 'Protein_Change'] == [ fields[x] for x in [3,4,5,8,12,13,26] ]:
                 maf_filetype = UNION_MAF
                 bReadHeader = False
                 continue
@@ -53,7 +53,7 @@ def process_maf( args, Evidence, Variants, Genes):
             sample_t     = fields[15]   # here, this is tumor sample
             sample_n     = fields[16]   # here, this is (matched) normal sample
             aachange     = fields[36]
-            csq          = fields[50]
+
         if maf_filetype == UNION_MAF:
             hugo         = fields[ 0]
             chrom        = fields[ 3]
@@ -64,7 +64,7 @@ def process_maf( args, Evidence, Variants, Genes):
             sample_t     = fields[12]   # here, this is tumor sample
             sample_n     = fields[13]   # here, this is (matched) normal sample
             aachange     = fields[26]
-            csq          = fields[27]
+
 
 
         # Check whether this gene is mentioned in any database
