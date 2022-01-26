@@ -89,9 +89,8 @@ def process_maf( args, Evidence, Variants, Genes):
             elif re.search('ins', aachange):
                 print( '# TODO: cannot convert variant %s to HGVS format: insufficient information. Skipping.' % ( aachange ))
                 continue
-            elif re.search('del$', aachange):
-                print( '# TODO: cannot convert variant %s to HGVS format: unknown deletion format. Skipping.' % ( aachange ))
-                continue
+            elif re.search(r'del$', aachange):
+                aachange = harmonize_maf_2( aachange )
             else:
                 pass
 

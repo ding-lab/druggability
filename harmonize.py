@@ -56,3 +56,21 @@ def harmonize_maf_2( myvar ):
             print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
         return new_myvar
 
+    if re.search(r'del$', myvar):
+        a = myvar[ 0 : len(myvar) - 3 ]
+        b = re.search(r'([A-Y]+)([0-9]+)', a)
+        if b is None:
+            print('ERROR: unable to parse del variant %s in union maf' % (myvar))
+
+        if len(b[1]) == 1:
+            new_myvar = myvar
+        else:
+            start_aa  = b[1][0]
+            start_pos = int(b[2])
+            end_aa    = b[1][-1]
+            end_pos   = start_pos + len(b[1]) - 1
+            new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'del'
+
+        if DEBUG_2:
+            print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
+        return new_myvar
