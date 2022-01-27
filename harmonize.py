@@ -27,9 +27,9 @@ def fix_synonymous( myvar ):
         print('# ERROR: unexpected synonymous variant format')
 
 
-def harmonize_maf_2( myvar ):
+def harmonize_maf_2( myvar, gene, Fasta ):
     '''
-    Addition round of reformatting due to non-HGVS convention.
+    Additional round of reformatting due to non-HGVS convention.
     In particular, position ranges do not include the single-letter amino acids.
     We can fix 'delins' variants, which come denoted  as '>', and some insertions we've seen include *{aa} and **.
     '''
@@ -44,9 +44,9 @@ def harmonize_maf_2( myvar ):
         if len(b) != 2:
             print('ERROR: no range reported in delins variant %s in union maf' % ( myvar ))
             return myvar
-        start_pos  = b[0]
+        start_pos  = int(b[0])
         c          = re.search(r'^(\d+)([A-Y]{2,})$', b[1])
-        end_pos    = c[1]
+        end_pos    = int(c[1])
         ref_aa_str = c[2]
         start_aa   = ref_aa_str[ 0]
         end_aa     = ref_aa_str[-1]
@@ -61,7 +61,7 @@ def harmonize_maf_2( myvar ):
         b = re.search(r'([A-Y]+)([0-9]+)', a)
         if b is None:
             print('ERROR: unable to parse del variant %s in union maf' % (myvar))
-
+            return myvar
         if len(b[1]) == 1:
             new_myvar = myvar
         else:
@@ -71,6 +71,29 @@ def harmonize_maf_2( myvar ):
             end_pos   = start_pos + len(b[1]) - 1
             new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'del'
 
+        if DEBUG_2:
+            print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
+        return new_myvar
+
+    if re.search(r'ins', myvar):
+        b = re.search(r'^(\d+)(_)(\d+)(ins)(\D*)$', myvar)
+        if b is None:
+            print('ERROR: unable to parse ins variant %s in union maf' % (myvar))
+            return myvar
+
+        if re.search(r'ins$', myvar):   # check to provide blank due to optional
+            b.append('')
+        start_pos = int(b[1])
+        end_pos   = int(b[3])
+        ins_seq   = b[5]
+
+        # Use amino acid lookup to reformat
+        if gene not in Fasta.keys():
+            print('ERROR: unable to reformat variant %s in union maf: gene %s does not exist among fasta sequences' % (myvar, gene))
+            return myvar
+        start_aa  = Fasta[gene]['fasta'][ start_pos - 1 ]
+        end_aa    = Fasta[gene]['fasta'][ end_pos   - 1 ]
+        new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'ins' + ins_seq
         if DEBUG_2:
             print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
         return new_myvar

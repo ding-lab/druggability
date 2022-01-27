@@ -27,3 +27,8 @@ oncokb_files = {
     'variants':      druggability_databases_gitpath + '/OncoKB/' + 'oncokb.annotated.tsv',
     'therapeutics':  druggability_databases_gitpath + '/OncoKB/' + 'oncokb.therapeutic.tsv',
 }
+
+# Read in gzipped fasta protein file
+uniprot_files = {
+    'fasta':         druggability_databases_gitpath + '/Uniprot/' + 'uniprot_sprot.fasta.human.tsv.gz',
+}

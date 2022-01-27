@@ -5,6 +5,7 @@ import csv, re
 import config
 from utils import *
 from enums import *
+import gzip
 
 DEBUG=config.DEBUG
 DEBUG_2=config.DEBUG_2
@@ -389,4 +390,24 @@ def load_oncokb_therapeutics(Evidence, Variants, Genes):
                         Evidence[e_id]['drugs_list_string'] = drug
                         Evidence[e_id]['evidence_level']    = level
 
+    tsv_file.close()
+
+
+def load_fasta( Fasta ):
+    tsv_file = gzip.open( config.uniprot_files['fasta'], mode='rt')
+    read_tsv = csv.reader(tsv_file, delimiter='\t')
+    bReadHeader = True
+
+    for row in read_tsv:
+        fields = [ s.strip() for s in row ]
+        if len(fields) != 3:
+            print('ERROR: check column count in preprocessed uniprot fasta file')
+            sys.exit(1)
+        if bReadHeader:
+            if fields[0] == 'Gene':
+                bReadHeader = False
+            continue
+
+        gene, fa_header, fa_seq = fields
+        Fasta[ gene ] = {'fasta': fa_seq}
     tsv_file.close()

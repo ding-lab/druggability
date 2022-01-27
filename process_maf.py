@@ -14,7 +14,7 @@ DEBUG_2=config.DEBUG_2
 csv.field_size_limit( 131072 * 82 )
 
 
-def process_maf( args, Evidence, Variants, Genes):
+def process_maf( args, Evidence, Variants, Genes, Fasta):
 
     inputFile = args.variant_file
     Variant_tracking = dict()   # record which samples have which variants
@@ -84,15 +84,8 @@ def process_maf( args, Evidence, Variants, Genes):
         aachange = harmonize_maf( aachange )
 
         if maf_filetype == UNION_MAF:       # additional treatment
-            if re.search(r'>', aachange):
-                aachange = harmonize_maf_2( aachange )
-            elif re.search('ins', aachange):
-                print( '# TODO: cannot convert variant %s to HGVS format: insufficient information. Skipping.' % ( aachange ))
-                continue
-            elif re.search(r'del$', aachange):
-                aachange = harmonize_maf_2( aachange )
-            else:
-                pass
+            if re.search(r'>', aachange) or re.search('ins', aachange) or re.search(r'del$', aachange):
+                aachange = harmonize_maf_2( aachange, hugo, Fasta )
 
 
         # Merge lists of reported rs ids; no such seems available in union_maf

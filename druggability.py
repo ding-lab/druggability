@@ -15,6 +15,7 @@ Evidence = dict()   # usage: key= drug, value = dict()
 Variants       = dict()
 Genes          = dict()   # index the variants
 VariantAliases = dict()   # for possibly crosslinking databases
+Fasta          = dict()   # fasta sequences for reformatting variants
 
 DEBUG=config.DEBUG
 
@@ -58,9 +59,11 @@ load_civic_evidence( Evidence, Variants )
 load_oncokb_evidence( Evidence, Variants )
 load_oncokb_therapeutics( Evidence, Variants, Genes )
 
+# Load fasta from uniprot
+load_fasta( Fasta )
 
 if args.variation_type == 'maf':
-    process_maf( args, Evidence, Variants, Genes)
+    process_maf( args, Evidence, Variants, Genes, Fasta)
 
 if args.variation_type == 'fusion':
     process_fusions( args, Evidence, Variants, Genes)
