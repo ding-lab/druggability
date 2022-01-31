@@ -32,3 +32,27 @@ oncokb_files = {
 uniprot_files = {
     'fasta':         druggability_databases_gitpath + '/Uniprot/' + 'uniprot_sprot.fasta.human.tsv.gz',
 }
+
+evidence_level_anno = {
+    # CIViC
+    'A': 'approved', # renamed from /validated/
+    'B': 'clinical',
+    'C': 'case study',
+    'D': 'preclinical',
+    'E': 'inferential',
+
+    # OncoKB
+    '1': 'approved', # is: FDA-recognized biomarker predictive of response to an FDA-approved drug in this indication
+    '2': 'approved', # is: standard care biomarker recommended by the NCCN or other professional guidelines predictive of response to an FDA-approved drug in this indication
+    '3A': 'clinical', # is: compelling clinical evidence supports the biomarker as being predictive of repsonse to a drug in this indication
+    '3B': 'clinical', # is: standard care or investigational biomarker predictive of response to an FDA-approved or investigational drug in another indiation
+    '4': 'preclinical', # is: compelling biological evidence supports the biomarker as being predictive of response to a drug
+    'Dx1': 'required for diagnosis', # is: FDA and/or professional guideline-recognized biomarker required for diagnosis in this indication
+    'Dx2': 'supports diagnosis', # is: FDA and/or professional guildeline-recognized biomarker tha supports diagnosis in this indication
+    'Dx3': 'assists diagnosis', # is: biomarker that may assist disease diagnosis in this indication based on clinical evidence
+    'R1': 'resistance, standard care', # is: standard care biomarker predictive of resistance to an FDA-approved drug in this indication
+    'R2': 'resistance, investigational', # is: compelling clinical evidence supports the biomarker as being predictive of resistance to a drug
+
+    # Miscellaneous
+    '-': '-',
+}

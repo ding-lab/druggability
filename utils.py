@@ -3,6 +3,7 @@
 
 import sys
 import re
+import config
 
 # Convert list to string
 def list2str( mylist ):
@@ -152,7 +153,7 @@ def print_summary_by_sample( Variant_tracking, Variants, Evidence ):
                     for v_id in this_alt['v_id_list']:
                         for ev_id in Variants[v_id]['evidence_list']:
                             t = Evidence[ev_id]
-                            print( *[ v_id.split(':')[0],   Variants[v_id]['variant'], t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], t['evidence_level'], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            print( *[ v_id.split(':')[0],   Variants[v_id]['variant'], t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
 
                     print('')
                     print('')
@@ -184,9 +185,9 @@ def print_summary_for_all( Matches, Variants, Evidence, args ):
                                 sys.exit(1)
                             bPrintHeader = False
                         if args.variation_type == 'maf':
-                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], t['evidence_level'], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
 
                         elif args.variation_type == 'fusion':
-                            print( *[ s, match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], t['evidence_level'], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            print( *[ s,                                  match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
                         else:
                             pass
