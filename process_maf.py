@@ -45,24 +45,50 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
 
         if maf_filetype == WASHU_MAF:
             hugo         = fields[ 0]
+            ref_build    = fields[ 3]
             chrom        = fields[ 4]
             pos_start    = fields[ 5]
             pos_end      = fields[ 6]
             maf_varclass = fields[ 8]
             vartype      = fields[ 9]   # SNP, INS, DEL, ...
+
+            ref = fields[10]
+
+            if ref == fields[11]:
+                alt = fields[12] if fields[12] != '-' else ''
+            elif ref == fields[12]:
+                alt = fields[11] if fields[11] != '-' else ''
+            else:
+                print('# ERROR: cannot resolve alteration at ' + hugo + ' ' + str(pos_start))
+                sys.exit(1)
+
             sample_t     = fields[15]   # here, this is tumor sample
             sample_n     = fields[16]   # here, this is (matched) normal sample
+            cdnachange   = fields[34]
             aachange     = fields[36]
 
         if maf_filetype == UNION_MAF:
             hugo         = fields[ 0]
+            ref_build    = fields[ 2]
             chrom        = fields[ 3]
             pos_start    = fields[ 4]
             pos_end      = fields[ 5]
             maf_varclass = fields[ 7]
             vartype      = fields[ 8]   # SNP, INS, DEL, ...
+
+            ref = fields[ 9]
+
+            if ref == fields[10]:
+                alt = fields[11] if fields[11] != '-' else ''
+            elif ref == fields[11]:
+                alt = fields[10] if fields[10] != '-' else ''
+            else:
+                print('# ERROR: cannot resolve alteration at ' + hugo + ' ' + str(pos_start))
+                sys.exit(1)
+
             sample_t     = fields[12]   # here, this is tumor sample
             sample_n     = fields[13]   # here, this is (matched) normal sample
+            cdnachange   = fields[24]
             aachange     = fields[26]
 
 
@@ -72,7 +98,7 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
             continue
 
         # summarize alteration
-        alteration_summary = '\t'.join([ hugo, chrom, pos_start, aachange, maf_varclass, vartype ])
+        alteration_summary = '\t'.join([ hugo, chrom, pos_start, cdnachange, aachange, ref_build, maf_varclass, vartype ])
 
         # initially look at only vars with AA change in HGVS short format; if blank, it is often a splice site
         if not re.search( r'^p\.', aachange):
@@ -86,6 +112,10 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
         if maf_filetype == UNION_MAF:       # additional treatment
             if re.search(r'>', aachange) or re.search('ins', aachange) or re.search(r'del$', aachange):
                 aachange = harmonize_maf_2( aachange, hugo, Fasta )
+
+        # calculate gdna change
+        tmp_set = { 'pos0': pos_start, 'pos1': pos_end, 'ref': ref, 'alt': alt }
+        gdnachange = calculate_gdna_change( tmp_set )
 
 
         # Merge lists of reported rs ids; no such seems available in union_maf
@@ -113,11 +143,13 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
         num_partial_matches = 0
         num_unmatched       = 0
 
+
         for v_id in Genes[hugo]:
 
             if is_exact_match( aachange, v_id, Variants ):
                 check_alloc_match( Matches, sample_pair )
-                list_append( Matches[ sample_pair ]['full'], {'v_id': v_id, 'reason': '-', 'called': hugo+' '+aachange} )
+                called_str = hugo + ' ' + aachange + '|' + gdnachange + '|' + ref_build
+                list_append( Matches[ sample_pair ]['full'], {'v_id': v_id, 'reason': '-', 'called': called_str} )
                 Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
                 Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
                 continue
@@ -126,7 +158,8 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
                 if Variants[v_id]['prot_ref_start_pos'] > 0:
                     if get_overlap_length( aachange, v_id, Variants ) > 0:
                         check_alloc_match( Matches, sample_pair )
-                        list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': 'has_overlap', 'called': hugo+' '+aachange} )
+                        called_str = hugo + ' ' + aachange + '|' + gdnachange + '|' + ref_build
+                        list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': 'has_overlap', 'called': called_str} )
                         Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
                         Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
                         continue

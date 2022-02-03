@@ -143,6 +143,33 @@ def get_pos_range( v ):
     print('# ERROR: unable to determine position range for ' + v)
     sys.exit(1)
 
+
+def calculate_gdna_change( variant_set ):
+    start_pos = variant_set['pos0']
+    end_pos   = variant_set['pos1']
+    ref       = variant_set['ref']
+    alt       = variant_set['alt']
+
+    # check for missing coordinates
+    if (not len(start_pos)) or (not len(end_pos)):
+        return ''
+
+    if (not len(ref)) and (not len(alt)):
+        return ''
+    if (not len(ref)) and (    len(alt)):
+        if (int(end_pos) - int(start_pos)) != 1:
+            print('# WARNING: insertion position not well defined for ' + variant_set['gene'] + ' at g=' + start_pos)
+            return ''
+        return 'g.' + start_pos + '_' + end_pos + 'ins' + alt
+    if (    len(ref)) and (not len(alt)):
+        return 'g.' + start_pos + '_' + end_pos + 'del'
+    # both ref,alt exist
+    if len(ref) == 1 and len(alt) == 1:   # substitution
+        return 'g.' + start_pos + ref + '>' + alt
+    else:
+        return 'g.' + start_pos + '_' + end_pos + 'delins' + alt
+
+
 def print_summary_by_sample( Variant_tracking, Variants, Evidence ):
     for sample in Variant_tracking.keys():
             for alteration in Variant_tracking[sample].keys():
@@ -184,10 +211,11 @@ def print_summary_for_all( Matches, Variants, Evidence, args ):
                                 print('#ERROR: unknown variant filetype for printing')
                                 sys.exit(1)
                             bPrintHeader = False
+                        matched_str = Variants[v_id]['variant'] + '|' + Variants[v_id]['gdnachange'] + '|' + Variants[v_id]['ref_build']
                         if args.variation_type == 'maf':
-                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, matched_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
 
                         elif args.variation_type == 'fusion':
-                            print( *[ s,                                  match_idx, called, Variants[v_id]['variant'], matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            print( *[ s,                                  match_idx, called, matched_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
                         else:
                             pass

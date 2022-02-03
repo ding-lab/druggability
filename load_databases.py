@@ -77,7 +77,7 @@ def load_civic(Variants, Genes, VariantAliases):
         # Instantiate record
         Variants[variant_id] = {
             'gene'                : fields[ 1],
-            'variant'             : variant,
+            'variant'             : variant,        # can contain manually standardized aachange
             'vartypes_list'       : vartypes_list,
 
             'pp_comment'          : fields[ 5],
@@ -92,10 +92,13 @@ def load_civic(Variants, Genes, VariantAliases):
             'chrom'               : '',
             'pos0'                : '',
             'pos1'                : '',
+            'ref'                 : '',
+            'alt'                 : '',
             'ensemble_version'    : '',
             'ref_build'           : '',
             'variant_aliases'     : '',
             'evidence_list'       : [],
+            'gdnachange'          : '',
 
             'prot_ref_start_pos'  : x0,  # start, end positions in protein target by maf mutation
             'prot_ref_end_pos'    : x1,
@@ -139,10 +142,17 @@ def load_civic(Variants, Genes, VariantAliases):
             'chrom'            : fields[ 7],
             'pos0'             : fields[ 8],
             'pos1'             : fields[ 9],
+            'ref'              : fields[10],
+            'alt'              : fields[11],
             'ensemble_version' : fields[13],
             'ref_build'        : fields[14],
             'variant_aliases'  : fields[25],
             'evidence_list'    : [],
+        })
+
+        # Calculate gDNA change
+        Variants[variant_id].update({
+            'gdnachange' : calculate_gdna_change(Variants[variant_id]),
         })
 
         # Add variant to gene list
@@ -250,6 +260,7 @@ def load_oncokb(Variants, Genes, VariantAliases):
             'ref_build'           : '',
             'variant_aliases'     : '',
             'evidence_list'       : [],
+            'gdnachange'          : '',
 
             'prot_ref_start_pos'  : x0,  # start, end positions in protein target by maf mutation
             'prot_ref_end_pos'    : x1,
