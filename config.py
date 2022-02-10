@@ -16,7 +16,7 @@ drugbank_files = {
 civic_files = {
     'assertions':    druggability_databases_gitpath + '/CIViC/' + '01-Oct-2021-AssertionSummaries.tsv',
     'genes':         druggability_databases_gitpath + '/CIViC/' + '01-Oct-2021-GeneSummaries.tsv',
-    'variants':      druggability_databases_gitpath + '/CIViC/' + '01-Oct-2021-VariantSummaries.tsv',
+    'variants':      druggability_databases_gitpath + '/CIViC/' + '01-Oct-2021-VariantSummaries.lifted.tsv',
     'evidence':      druggability_databases_gitpath + '/CIViC/' + '01-Oct-2021-ClinicalEvidenceSummaries.tsv',
     'variantgroups': druggability_databases_gitpath + '/CIViC/' + '01-Oct-2021-VariantGroupSummaries.tsv',
     'variants_preprocessed':      druggability_databases_gitpath + '/CIViC/' + '01-Oct-2021-VariantSummaries.preprocessed.tsv',

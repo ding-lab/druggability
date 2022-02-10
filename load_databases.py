@@ -102,6 +102,11 @@ def load_civic(Variants, Genes, VariantAliases):
 
             'prot_ref_start_pos'  : x0,  # start, end positions in protein target by maf mutation
             'prot_ref_end_pos'    : x1,
+
+            'comment_liftover'    : '',
+            'chrom_liftover'      : '',
+            'start_liftover'      : '',
+            'stop_liftover'       : '',
         }
 
     tsv_file.close()
@@ -110,7 +115,7 @@ def load_civic(Variants, Genes, VariantAliases):
         print('# num preprocessed civic variant records ignored: ' + str(num_vars_ignored))
 
 
-    # Load native file to get more information
+    # Load (modified) native file to get more information
     tsv_file = open( config.civic_files['variants'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
@@ -148,6 +153,10 @@ def load_civic(Variants, Genes, VariantAliases):
             'ref_build'        : fields[14],
             'variant_aliases'  : fields[25],
             'evidence_list'    : [],
+            'comment_liftover' : fields[29],
+            'chrom_liftover'   : fields[30],
+            'start_liftover'   : fields[31],
+            'stop_liftover'    : fields[32],
         })
 
         # Calculate gDNA change
@@ -264,6 +273,11 @@ def load_oncokb(Variants, Genes, VariantAliases):
 
             'prot_ref_start_pos'  : x0,  # start, end positions in protein target by maf mutation
             'prot_ref_end_pos'    : x1,
+
+            'comment_liftover'    : '',
+            'chrom_liftover'      : '',
+            'start_liftover'      : '',
+            'stop_liftover'       : '',
         }
 
         # Add variant to list for its gene

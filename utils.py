@@ -69,13 +69,13 @@ def print_output_header():
 
 def print_output_header_2():
     print_thin_line()
-    print( '\t'.join([ '#Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'Matched_Alteration', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ '#Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'Matched_Alteration', 'Matched_Alteration_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
     print_thin_line()
 
 def print_output_header_3():
     print_thin_line()
-    print( '\t'.join([ '#Sample', 'Match_Index', 'Called',  'Matched_Alteration', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ '#Sample',                        'Match_Index', 'Called',  'Matched_Alteration', 'Matched_Alteration_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
     print_thin_line()
 
@@ -212,10 +212,11 @@ def print_summary_for_all( Matches, Variants, Evidence, args ):
                                 sys.exit(1)
                             bPrintHeader = False
                         matched_str = Variants[v_id]['variant'] + '|' + Variants[v_id]['gdnachange'] + '|' + Variants[v_id]['ref_build']
+                        liftover_str = Variants[v_id]['chrom_liftover'] + ':' + Variants[v_id]['start_liftover'] + '-' + Variants[v_id]['stop_liftover']
                         if args.variation_type == 'maf':
-                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, matched_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, matched_str, liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
 
                         elif args.variation_type == 'fusion':
-                            print( *[ s,                                  match_idx, called, matched_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            print( *[ s,                                  match_idx, called, matched_str, liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
                         else:
                             pass
