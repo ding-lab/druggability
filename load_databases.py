@@ -29,7 +29,7 @@ def load_civic(Variants, Genes, VariantAliases):
                 bReadHeader = False
             continue
         num_vars_read += 1
-        variant_id         = 'civic:' + fields[0]
+        variant_id         = 'civic:{myid}'.format( myid=fields[0] )
         variant            = fields[3]
         variant_types_str  = fields[4]
         num_conditions     = int(fields[6])   # number of conditions to consider
@@ -68,7 +68,7 @@ def load_civic(Variants, Genes, VariantAliases):
         else:
             main_variant_class = MUTATION
 
-            # Find position range (integral values)
+            # Find position range (integral values) for AA change
             x0, x1 = get_pos_range( variant )
 
         if DEBUG_2:
@@ -99,6 +99,7 @@ def load_civic(Variants, Genes, VariantAliases):
             'variant_aliases'     : '',
             'evidence_list'       : [],
             'gdnachange'          : '',
+            'gdnacoords'          : '',
 
             'prot_ref_start_pos'  : x0,  # start, end positions in protein target by maf mutation
             'prot_ref_end_pos'    : x1,
@@ -107,6 +108,9 @@ def load_civic(Variants, Genes, VariantAliases):
             'chrom_liftover'      : '',
             'start_liftover'      : '',
             'stop_liftover'       : '',
+            'ref_build_liftover'  : '',
+            'gdnachange_liftover' : '',
+            'gdnacoords_liftover' : '',
         }
 
     tsv_file.close()
@@ -132,10 +136,14 @@ def load_civic(Variants, Genes, VariantAliases):
             continue
 
         num_vars_read += 1
-        variant_id = 'civic:' + fields[0]
+        variant_id = 'civic:{myid}'.format( myid = fields[0] )
 
         # Safeguard against new entries
         if variant_id not in Variants.keys():
+            continue
+
+        # Omit liftover failures by looking at chromosome field
+        if fields[30] == '-':
             continue
 
         # Accepted variant
@@ -143,25 +151,43 @@ def load_civic(Variants, Genes, VariantAliases):
             print(' '.join( ['# Accepted:', variant_id, fields[1] + ' as ' + Variants[variant_id]['gene'], fields[3]] ) )
 
         # Update information
+        chrom = fields[ 7].replace('chr','')
+        pos0  = fields[ 8]
+        pos1  = fields[ 9]
         Variants[variant_id].update({
-            'chrom'            : fields[ 7],
-            'pos0'             : fields[ 8],
-            'pos1'             : fields[ 9],
-            'ref'              : fields[10],
-            'alt'              : fields[11],
-            'ensemble_version' : fields[13],
-            'ref_build'        : fields[14],
-            'variant_aliases'  : fields[25],
-            'evidence_list'    : [],
-            'comment_liftover' : fields[29],
-            'chrom_liftover'   : fields[30],
-            'start_liftover'   : fields[31],
-            'stop_liftover'    : fields[32],
+            'chrom'              : chrom,
+            'pos0'               : pos0,
+            'pos1'               : pos1,
+            'ref'                : fields[10],
+            'alt'                : fields[11],
+            'ensemble_version'   : fields[13],
+            'ref_build'          : fields[14],
+            'variant_aliases'    : fields[25],
+            'evidence_list'      : [],
+            'comment_liftover'   : fields[29],
+            'chrom_liftover'     : fields[30].replace('chr',''),
+            'start_liftover'     : fields[31],
+            'stop_liftover'      : fields[32],
+            'ref_build_liftover' : config.civic_params['ref_build_liftover'],
         })
 
-        # Calculate gDNA change
+        # Validate input
+        if not len(chrom):
+            abort_run('ERROR: chromosome is missing from data source. Please check the input.')
+        else:
+            if not( len(pos0) and len(pos1) ):
+                abort_run('ERROR: this data source typically specifies chr,start,stop coordinates. Please check the input.')
+            if int(pos1) < int(pos0):
+                abort_run('ERROR: stop coordinate is upstream from start. Please check the input.')
+
+        # Calculate gDNA features
+        # ...for convenience, if not overkill
         Variants[variant_id].update({
-            'gdnachange' : calculate_gdna_change(Variants[variant_id]),
+            'gdnachange': calculate_gdna_change(Variants[variant_id], ''),
+            'gdnacoords': calculate_gdna_coords(Variants[variant_id], ''),
+
+            'gdnachange_liftover': calculate_gdna_change(Variants[variant_id], 'use_liftover'),
+            'gdnacoords_liftover': calculate_gdna_coords(Variants[variant_id], 'use_liftover'),
         })
 
         # Add variant to gene list
@@ -187,7 +213,6 @@ def load_civic(Variants, Genes, VariantAliases):
 
 
 
-
 def load_oncokb(Variants, Genes, VariantAliases):
 
     tsv_file = open( config.oncokb_files['variants'])
@@ -207,10 +232,10 @@ def load_oncokb(Variants, Genes, VariantAliases):
         num_vars_read += 1
         gene       = fields[0]
         variant    = fields[1]
-        variant_id = 'oncokb:' + str(num_vars_read)
+        variant_id = 'oncokb:{myid}'.format( myid = str(num_vars_read) )
 
         # Ignore certain values
-        if re.search(r'[^_]splice$|expression|Dx2|[0-9](mis|mut)$|wildtype|fusions|amplification|truncating|deletion|domain|exon|trunc$|tandem', variant, re.IGNORECASE):
+        if re.search(r'splice|expression|Dx2|[0-9](mis|mut)$|wildtype|fusions|amplification|truncating|deletion|domain|exon|trunc$|tandem|methylation', variant, re.IGNORECASE):
             num_vars_ignored += 1
             continue
 
@@ -270,6 +295,7 @@ def load_oncokb(Variants, Genes, VariantAliases):
             'variant_aliases'     : '',
             'evidence_list'       : [],
             'gdnachange'          : '',
+            'gdnacoords'          : '',
 
             'prot_ref_start_pos'  : x0,  # start, end positions in protein target by maf mutation
             'prot_ref_end_pos'    : x1,
@@ -278,6 +304,9 @@ def load_oncokb(Variants, Genes, VariantAliases):
             'chrom_liftover'      : '',
             'start_liftover'      : '',
             'stop_liftover'       : '',
+            'ref_build_liftover'  : '',
+            'gdnachange_liftover' : '',
+            'gdnacoords_liftover' : '',
         }
 
         # Add variant to list for its gene
@@ -304,8 +333,8 @@ def load_civic_evidence( Evidence, Variants ):
             hdr_civic_evidence = list(fields)
             continue
 
-        evidence_id = 'civic:' + fields[20]
-        variant_id  = 'civic:' + fields[21]
+        evidence_id = 'civic:{myid}'.format( myid = fields[20] )
+        variant_id  = 'civic:{myid}'.format( myid = fields[21] )
 
         Evidence[evidence_id] = {
             'source_db'                  : 'civic',
@@ -355,8 +384,8 @@ def load_oncokb_evidence( Evidence, Variants ):
             continue
 
         num_vars_read += 1
-        variant_id     = 'oncokb:' + str(num_vars_read)
-        evidence_id    = 'oncokb:' + str(num_vars_read)
+        variant_id     = 'oncokb:{myid}'.format( myid = str(num_vars_read) )
+        evidence_id    = 'oncokb:{myid}'.format( myid = str(num_vars_read) )
 
         # proceed only for records retained previously in load_oncokb()
         if  variant_id  not in  Variants:

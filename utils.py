@@ -5,19 +5,29 @@ import sys
 import re
 import config
 
+def abort_run( msg ):
+    print( msg )
+    sys.exit(1)
+
 # Convert list to string
 def list2str( mylist ):
     return ','.join( filter( None, mylist ))
 
-def is_exact_match( candidate, v_id, Variants ):
-    if candidate == Variants[v_id]['variant']:
+def is_exact_aachange_match( query, v_id, Variants ):
+    if query == Variants[v_id]['variant']:
         return True
     else:
         return False
 
-def get_overlap_length( candidate, v_id, Variants ):
-    a0, a1 = get_pos_range( candidate )
-    b0, b1 = [ Variants[v_id]['prot_ref_start_pos'], Variants[v_id]['prot_ref_end_pos'] ]
+def has_genomic_match( query, v_id, Variants, fieldname ):
+    if query == Variants[v_id][ fieldname ]:
+        return True
+    else:
+        return False
+
+def get_aachange_overlap_length( query, v_id, Variants ):
+    a0, a1 = get_pos_range( query )
+    b0, b1 = Variants[v_id]['prot_ref_start_pos'], Variants[v_id]['prot_ref_end_pos']
 
     if a0 <= b0:
         P0 = a0
@@ -29,7 +39,8 @@ def get_overlap_length( candidate, v_id, Variants ):
         P1 = b1
         Q0 = a0
         Q1 = a1
-    return int( P1 - Q0 + 1)
+    k = P1 - Q0 + 1
+    return k if k > 0 else 0
 
 def is_pattern_aa_match( aachange, v_id, Variants ):
     my_regex = r'^' + re.escape(Variants[v_id]['variant'])
@@ -48,9 +59,9 @@ def format_citations( mylist ):
     if len(mylist):
         for cit in mylist:
             if cit['source'].lower() == 'pubmed':
-                result_list.append( 'PMID' + ':' + cit['citation_id'])
+                result_list.append( '{source}:{myid}'.format( source='PMID', myid=cit['citation_id'] ) )
             else:
-                result_list.append( cit['source'] + ':' + cit['citation_id'])
+                result_list.append( '{source}:{myid}'.format( source=cit['source'], myid=cit['citation_id'] ) )
         return '; '.join( result_list )
     else:
         return '-'
@@ -69,13 +80,13 @@ def print_output_header():
 
 def print_output_header_2():
     print_thin_line()
-    print( '\t'.join([ '#Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'Matched_Alteration', 'Matched_Alteration_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ '#Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
     print_thin_line()
 
 def print_output_header_3():
     print_thin_line()
-    print( '\t'.join([ '#Sample',                        'Match_Index', 'Called',  'Matched_Alteration', 'Matched_Alteration_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ '#Sample',                        'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
     print_thin_line()
 
@@ -144,30 +155,72 @@ def get_pos_range( v ):
     sys.exit(1)
 
 
-def calculate_gdna_change( variant_set ):
-    start_pos = variant_set['pos0']
-    end_pos   = variant_set['pos1']
+# calculate genomic coordinate range
+# ...a stop coordinate is ld be generated
+def calculate_gdna_coords( variant_set, liftover_status ):
+    if liftover_status == 'use_liftover':
+        pos0 = variant_set['start_liftover']
+        pos1 = variant_set['stop_liftover']
+    else:
+        pos0 = variant_set['pos0']
+        pos1 = variant_set['pos1']
+
+    if not len(pos1):
+        pos1 = pos0     # create stop coordinate where not provided; needed for checking interval overlap
+    return 'g.{chrom}:{pos0}_{pos1}'.format( chrom=variant_set['chrom'], pos0=pos0, pos1=pos1 )
+
+
+# Genomic overlap with liftover coords
+def has_genomic_overlap( query_dict, v_id, Variants ):
+    q_chrom = query_dict['chrom']
+    if q_chrom != Variants[v_id]['chrom_liftover']:
+        return int(0)
+    a0, a1 = int(query_dict['pos0']), int(query_dict['pos1'])
+    b0, b1 = int(Variants[v_id]['start_liftover']), int(Variants[v_id]['stop_liftover'])
+
+    if a0 <= b0:
+        P0 = a0
+        P1 = a1
+        Q0 = b0
+        Q1 = b1
+    else:
+        P0 = b0
+        P1 = b1
+        Q0 = a0
+        Q1 = a1
+    k = P1 - Q0 + 1
+    return k if k > 0 else 0
+
+
+def calculate_gdna_change( variant_set, liftover_status ):
+    gene      = variant_set['gene']
     ref       = variant_set['ref']
     alt       = variant_set['alt']
 
-    # check for missing coordinates
-    if (not len(start_pos)) or (not len(end_pos)):
-        return ''
+    if liftover_status == 'use_liftover':
+        chrom     = variant_set['chrom_liftover']
+        start_pos = variant_set['start_liftover']
+        end_pos   = variant_set['stop_liftover']
+    else:
+        chrom     = variant_set['chrom']
+        start_pos = variant_set['pos0']
+        end_pos   = variant_set['pos1']
 
-    if (not len(ref)) and (not len(alt)):
-        return ''
+
+    # check
     if (not len(ref)) and (    len(alt)):
         if (int(end_pos) - int(start_pos)) != 1:
-            print('# WARNING: insertion position not well defined for ' + variant_set['gene'] + ' at g=' + start_pos)
+            print('# WARNING: (TODO) positions may describe duplication rathern than insertion ({gene} at g.{pos})'.format( gene=gene, pos=start_pos ))
             return ''
-        return 'g.' + start_pos + '_' + end_pos + 'ins' + alt
+        return 'g.{chrom}:{start}_{stop}ins{alt}'.format( chrom=chrom, start=start_pos, stop=end_pos, alt=alt )
+
     if (    len(ref)) and (not len(alt)):
-        return 'g.' + start_pos + '_' + end_pos + 'del'
-    # both ref,alt exist
+        return 'g.{chrom}:{start}_{stop}del' .format( chrom=chrom, start=start_pos, stop=end_pos )
+
     if len(ref) == 1 and len(alt) == 1:   # substitution
-        return 'g.' + start_pos + ref + '>' + alt
+        return 'g.{chrom}:{start}{ref}>{alt}'.format( chrom=chrom, start=start_pos, ref=ref, alt=alt )
     else:
-        return 'g.' + start_pos + '_' + end_pos + 'delins' + alt
+        return 'g.{chrom}:{start}_{stop}delins{alt}'.format( chrom=chrom, start=start_pos, stop=end_pos, alt=alt )
 
 
 def print_summary_by_sample( Variant_tracking, Variants, Evidence ):
@@ -211,12 +264,12 @@ def print_summary_for_all( Matches, Variants, Evidence, args ):
                                 print('#ERROR: unknown variant filetype for printing')
                                 sys.exit(1)
                             bPrintHeader = False
-                        matched_str = Variants[v_id]['variant'] + '|' + Variants[v_id]['gdnachange'] + '|' + Variants[v_id]['ref_build']
-                        liftover_str = Variants[v_id]['chrom_liftover'] + ':' + Variants[v_id]['start_liftover'] + '-' + Variants[v_id]['stop_liftover']
+                        db_orig_str     = '{variant}|{gchange}|{refbuild}'.format( variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange'], refbuild=Variants[v_id]['ref_build'] )
+                        db_liftover_str = '{variant}|{gchange}|{refbuild}'.format( variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange_liftover'], refbuild=Variants[v_id]['ref_build_liftover'] )
                         if args.variation_type == 'maf':
-                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, matched_str, liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
 
                         elif args.variation_type == 'fusion':
-                            print( *[ s,                                  match_idx, called, matched_str, liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            print( *[ s,                                  match_idx, called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
                         else:
                             pass

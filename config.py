@@ -21,6 +21,9 @@ civic_files = {
     'variantgroups': druggability_databases_gitpath + '/CIViC/' + '01-Oct-2021-VariantGroupSummaries.tsv',
     'variants_preprocessed':      druggability_databases_gitpath + '/CIViC/' + '01-Oct-2021-VariantSummaries.preprocessed.tsv',
 }
+civic_params = {
+    'ref_build_liftover': 'GRCh38',
+}
 
 # Read in current oncokb
 oncokb_files = {
