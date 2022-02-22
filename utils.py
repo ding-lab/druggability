@@ -167,7 +167,7 @@ def calculate_gdna_coords( variant_set, liftover_status ):
 
     if not len(pos1):
         pos1 = pos0     # create stop coordinate where not provided; needed for checking interval overlap
-    return 'g.{chrom}:{pos0}_{pos1}'.format( chrom=variant_set['chrom'], pos0=pos0, pos1=pos1 )
+    return '{chrom}:g.{pos0}_{pos1}'.format( chrom=variant_set['chrom'], pos0=pos0, pos1=pos1 )
 
 
 # Genomic overlap with liftover coords
@@ -212,15 +212,15 @@ def calculate_gdna_change( variant_set, liftover_status ):
         if (int(end_pos) - int(start_pos)) != 1:
             print('# WARNING: (TODO) positions may describe duplication rathern than insertion ({gene} at g.{pos})'.format( gene=gene, pos=start_pos ))
             return ''
-        return 'g.{chrom}:{start}_{stop}ins{alt}'.format( chrom=chrom, start=start_pos, stop=end_pos, alt=alt )
+        return '{chrom}:g.{start}_{stop}ins{alt}'.format( chrom=chrom, start=start_pos, stop=end_pos, alt=alt )
 
     if (    len(ref)) and (not len(alt)):
-        return 'g.{chrom}:{start}_{stop}del' .format( chrom=chrom, start=start_pos, stop=end_pos )
+        return '{chrom}:g.{start}_{stop}del' .format( chrom=chrom, start=start_pos, stop=end_pos )
 
     if len(ref) == 1 and len(alt) == 1:   # substitution
-        return 'g.{chrom}:{start}{ref}>{alt}'.format( chrom=chrom, start=start_pos, ref=ref, alt=alt )
+        return '{chrom}:g.{start}{ref}>{alt}'.format( chrom=chrom, start=start_pos, ref=ref, alt=alt )
     else:
-        return 'g.{chrom}:{start}_{stop}delins{alt}'.format( chrom=chrom, start=start_pos, stop=end_pos, alt=alt )
+        return '{chrom}:g.{start}_{stop}delins{alt}'.format( chrom=chrom, start=start_pos, stop=end_pos, alt=alt )
 
 
 def print_summary_by_sample( Variant_tracking, Variants, Evidence ):
