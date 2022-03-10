@@ -4,10 +4,15 @@
 import sys
 import re
 import config
+import logging
+import datetime
 
 def abort_run( msg ):
-    print( msg )
+    logging.error( msg )
     sys.exit(1)
+
+def log_timestamp( label ):
+    logging.info('{}: {}'.format(label, datetime.datetime.now() ))
 
 # Convert list to string
 def list2str( mylist ):
@@ -113,8 +118,7 @@ def parse_range( s, flag, infostr ):
     x = []                               # end points
     seg = s.split('_')
     if len(seg) > 2:
-        print('# ERROR: cannot identify range in ' + s)
-        sys.exit(1)
+        abort_run('cannot identify range in ' + s)
     for si in seg:
         si = re.sub('[A-Y]', '', si)     # remove aa
         x.append( int(si) )
@@ -151,8 +155,7 @@ def get_pos_range( v ):
     if v == 'M1?':
         return parse_range( 'M1', '', '')
 
-    print('# ERROR: unable to determine position range for ' + v)
-    sys.exit(1)
+    abort_run('unable to determine position range for ' + v)
 
 
 # calculate genomic coordinate range
@@ -210,7 +213,7 @@ def calculate_gdna_change( variant_set, liftover_status ):
     # check
     if (not len(ref)) and (    len(alt)):
         if (int(end_pos) - int(start_pos)) != 1:
-            print('# WARNING: (TODO) positions may describe duplication rathern than insertion ({gene} at g.{pos})'.format( gene=gene, pos=start_pos ))
+            logging.info('(TODO) positions may describe duplication rathern than insertion ({gene} at g.{pos})'.format( gene=gene, pos=start_pos ))
             return ''
         return '{chrom}:g.{start}_{stop}ins{alt}'.format( chrom=chrom, start=start_pos, stop=end_pos, alt=alt )
 
@@ -242,7 +245,7 @@ def print_summary_by_sample( Variant_tracking, Variants, Evidence ):
 def print_summary_for_all( Matches, Variants, Evidence, args ):
     bPrintHeader = True
     if not Matches:
-        print("No matches found!")
+        logging.info('No matches found!')
         return
     for s in Matches:
         match_idx = 0
@@ -261,8 +264,8 @@ def print_summary_for_all( Matches, Variants, Evidence, args ):
                             elif args.variation_type == 'fusion':
                                 print_output_header_3()
                             else:
-                                print('#ERROR: unknown variant filetype for printing')
-                                sys.exit(1)
+                                abort_run('unknown variant filetype for printing')
+
                             bPrintHeader = False
                         db_orig_str     = '{variant}|{gchange}|{refbuild}'.format( variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange'], refbuild=Variants[v_id]['ref_build'] )
                         db_liftover_str = '{variant}|{gchange}|{refbuild}'.format( variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange_liftover'], refbuild=Variants[v_id]['ref_build_liftover'] )

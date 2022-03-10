@@ -6,12 +6,13 @@ import config
 from utils import *
 from enums import *
 import gzip
+import logging
 
 DEBUG=config.DEBUG
 DEBUG_2=config.DEBUG_2
 
-def load_civic(Variants, Genes, VariantAliases):
 
+def load_civic(Variants, Genes, VariantAliases):
     # Load preprocessed variants
     tsv_file = open( config.civic_files['variants_preprocessed'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
@@ -22,8 +23,7 @@ def load_civic(Variants, Genes, VariantAliases):
     for row in read_tsv:
         fields = [ s.strip() for s in row ]
         if len(fields) != 11:
-            print('ERROR: check column count in preprocessed variants file')
-            sys.exit(1)
+            abort_run('check column count in preprocessed variants file')
         if bReadHeader:
             if fields[0] == 'variant_id':
                 bReadHeader = False
@@ -38,13 +38,13 @@ def load_civic(Variants, Genes, VariantAliases):
         if num_conditions == 0:    # ignore entry
             num_vars_ignored += 1
             if DEBUG_2:
-                print(' '.join( ['# preprocessed IGNORED:', variant_id, fields[1],variant,variant_types_str] ) )
+                logging.info(' '.join( ['preprocessed IGNORED:', variant_id, fields[1],variant,variant_types_str] ))
             continue
 
         if re.search(r'amplification|copy number|exon|expression|loss|microsatellite|mutation|nuclear|phosphorylation|promoter|splice|tandem|truncating|wildtype|domain', variant.lower(), re.IGNORECASE):
             num_vars_ignored += 1
             if DEBUG_2:
-                print(' '.join( ['# preprocessed IGNORED(variant name):', variant_id, fields[1],variant,variant_types_str] ) )
+                logging.info(' '.join( ['preprocessed IGNORED(variant name):', variant_id, fields[1],variant,variant_types_str] ))
             continue
 
         # Classify variant
@@ -72,7 +72,7 @@ def load_civic(Variants, Genes, VariantAliases):
             x0, x1 = get_pos_range( variant )
 
         if DEBUG_2:
-            print( '# (civic) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
+            logging.info( '(civic) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
 
         # Instantiate record
         Variants[variant_id] = {
@@ -115,8 +115,8 @@ def load_civic(Variants, Genes, VariantAliases):
 
     tsv_file.close()
     if DEBUG:
-        print('# num preprocessed civic variant records read: ' + str(num_vars_read))
-        print('# num preprocessed civic variant records ignored: ' + str(num_vars_ignored))
+        logging.info('num preprocessed civic variant records read: ' + str(num_vars_read))
+        logging.info('num preprocessed civic variant records ignored: ' + str(num_vars_ignored))
 
 
     # Load (modified) native file to get more information
@@ -148,7 +148,7 @@ def load_civic(Variants, Genes, VariantAliases):
 
         # Accepted variant
         if DEBUG_2:
-            print(' '.join( ['# Accepted:', variant_id, fields[1] + ' as ' + Variants[variant_id]['gene'], fields[3]] ) )
+            logging.info(' '.join( ['Accepted:', variant_id, fields[1] + ' as ' + Variants[variant_id]['gene'], fields[3]] ))
 
         # Update information
         chrom = fields[ 7].replace('chr','')
@@ -173,12 +173,12 @@ def load_civic(Variants, Genes, VariantAliases):
 
         # Validate input
         if not len(chrom):
-            abort_run('ERROR: chromosome is missing from data source. Please check the input.')
+            abort_run('chromosome is missing from data source. Please check the input.')
         else:
             if not( len(pos0) and len(pos1) ):
-                abort_run('ERROR: this data source typically specifies chr,start,stop coordinates. Please check the input.')
+                abort_run('this data source typically specifies chr,start,stop coordinates. Please check the input.')
             if int(pos1) < int(pos0):
-                abort_run('ERROR: stop coordinate is upstream from start. Please check the input.')
+                abort_run('stop coordinate is upstream from start. Please check the input.')
 
         # Calculate gDNA features
         # ...for convenience, if not overkill
@@ -208,8 +208,8 @@ def load_civic(Variants, Genes, VariantAliases):
 
     tsv_file.close()
     if DEBUG:
-        print('# num civic variant records read: ' + str(num_vars_read))
-        print('# num civic variant records ignored: ' + str(num_vars_ignored))
+        logging.info('num civic variant records read: ' + str(num_vars_read))
+        logging.info('num civic variant records ignored: ' + str(num_vars_ignored))
 
 
 
@@ -268,8 +268,8 @@ def load_oncokb(Variants, Genes, VariantAliases):
             x0, x1 = get_pos_range( variant )
 
         if DEBUG_2:
-            print(' '.join( ['# oncokb variant ALLOWED:', variant_id, gene, variant, 'class='+str(main_variant_class)] ) )
-            print( '# (oncokb) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
+            logging.info(' '.join( ['oncokb variant ALLOWED:', variant_id, gene, variant, 'class='+str(main_variant_class)] ))
+            logging.info( '(oncokb) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
 
 
         # Instantiate record
@@ -316,8 +316,8 @@ def load_oncokb(Variants, Genes, VariantAliases):
 
     tsv_file.close()
     if DEBUG:
-        print('# num oncokb variant records read (initial pass): %s' %  (num_vars_read))
-        print('# num oncokb variant records ignored (initial pass): %s' % (num_vars_ignored))
+        logging.info('num oncokb variant records read (initial pass): %s' %  (num_vars_read))
+        logging.info('num oncokb variant records ignored (initial pass): %s' % (num_vars_ignored))
 
 
 def load_civic_evidence( Evidence, Variants ):
@@ -413,8 +413,8 @@ def load_oncokb_evidence( Evidence, Variants ):
 
     tsv_file.close()
     if DEBUG:
-        print('# num oncokb variant records read (second pass): %s' % (num_vars_read))
-        print('# num oncokb variant records ignored (second pass): %s' % (num_vars_ignored))
+        logging.info('num oncokb variant records read (second pass): %s' % (num_vars_read))
+        logging.info('num oncokb variant records ignored (second pass): %s' % (num_vars_ignored))
 
 
 def load_oncokb_therapeutics(Evidence, Variants, Genes):
@@ -455,8 +455,7 @@ def load_fasta( Fasta ):
     for row in read_tsv:
         fields = [ s.strip() for s in row ]
         if len(fields) != 3:
-            print('ERROR: check column count in preprocessed uniprot fasta file')
-            sys.exit(1)
+            abort_run('check column count in preprocessed uniprot fasta file')
         if bReadHeader:
             if fields[0] == 'Gene':
                 bReadHeader = False

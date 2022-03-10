@@ -6,6 +6,7 @@ import config
 from utils import *
 from enums import *
 from harmonize import *
+import logging
 
 DEBUG=config.DEBUG
 DEBUG_2=config.DEBUG_2
@@ -40,7 +41,7 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
                 bReadHeader = False
                 continue
             else:
-                print("ERROR: Unrecognized maf format")
+                logging.error('Unrecognized maf format')
                 sys.exit(1)
 
         if maf_filetype == WASHU_MAF:
@@ -80,7 +81,7 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
             elif ref == fields[11]:
                 alt = fields[10] if fields[10] != '-' else ''
             else:
-                print('# ERROR: cannot resolve alteration at {gene} {pos}'.format( gene=gene, pos=str(pos_start) ))
+                logging.error('cannot resolve alteration at {gene} {pos}'.format( gene=gene, pos=str(pos_start) ))
                 sys.exit(1)
 
             sample_t     = fields[12]   # here, this is tumor sample
@@ -100,7 +101,7 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
         # initially look at only vars with AA change in HGVS short format; if blank, it is often a splice site
         if not re.search( r'^p\.', aachange):
             if DEBUG_2:
-                print( '# maf record IGNORED: ' + alteration_summary )
+                logging.info( 'maf record IGNORED: ' + alteration_summary )
             continue
 
         # harmonize
