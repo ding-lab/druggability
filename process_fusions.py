@@ -3,16 +3,12 @@
 
 import os, sys, csv, re
 import config
+import myglobal
 from utils import *
 from enums import *
-
-DEBUG=config.DEBUG
-DEBUG_2=config.DEBUG_2
-
-DEBUG_2=False
+import logging
 
 def process_fusions( args, Evidence, Variants, Genes):
-
     inputFile         = args.variant_file
     Variant_tracking  = dict()   # record variants by sample
     fusion_filetype   = UNDECLARED
@@ -21,6 +17,7 @@ def process_fusions( args, Evidence, Variants, Genes):
     hdr               = []    # column headers
     expected_hdr      = ['FusionName', 'LeftBreakpoint', 'RightBreakpoint', 'Sample', 'JunctionReadCount', 'SpanningFragCount', 'FFPM', 'PROT_FUSION_TYPE']
     bReadHeader       = True
+    bHasSampleMatch   = False
 
     tsv_file  = open( inputFile )
     read_tsv  = csv.reader(tsv_file, delimiter='\t')
@@ -33,19 +30,16 @@ def process_fusions( args, Evidence, Variants, Genes):
                 fusion_filetype = SINGLE
                 bReadHeader = False
                 if hdr[0:8] != expected_hdr:
-                    print("ERROR: Unexpected fusion file column format")
-                    sys.exit(1)
+                    abort_run('Unexpected fusion file column format')
                 continue
             elif row[2] == 'FusionName':
                 fusion_filetype = COMBINED
                 bReadHeader = False
                 if hdr[2:10] != expected_hdr:
-                    print("ERROR: Unexpected fusion file column format")
-                    sys.exit(1)
+                    abort_run('Unexpected fusion file column format')
                 continue
             else:
-                print("ERROR: Unrecognized fusion file format")
-                sys.exit(1)
+                abort_run('Unrecognized fusion file format')
 
         # shift entries for aggregated fusion reports to match single-sample reports
         if fusion_filetype == COMBINED:
@@ -54,6 +48,11 @@ def process_fusions( args, Evidence, Variants, Genes):
         # Process entry
 
         FusionName, LeftBreakpoint, RightBreakpoint, Sample, JunctionReadCount, SpanningFragCount, FFPM, PROT_FUSION_TYPE = fields[0:8]
+
+        # Require sample to match
+        if Sample != args.tumor_name:
+            continue
+        bHasSampleMatch = True
 
         # summarize alteration
         alteration_summary = '\t'.join([ FusionName, LeftBreakpoint, RightBreakpoint ])
@@ -97,6 +96,11 @@ def process_fusions( args, Evidence, Variants, Genes):
                         Variant_tracking[Sample][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
 
     tsv_file.close()
+
+    if bHasSampleMatch:
+        logging.info('Sample name was mentioned in the input file')
+    else:
+        logging.info('Sample name was NOT mentioned in the input file')
 
     # Print summary by sample
     # print_summary_by_sample( Variant_tracking, Variants, Evidence )

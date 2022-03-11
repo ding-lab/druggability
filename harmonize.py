@@ -3,9 +3,9 @@
 
 import re
 import config
+import myglobal
 from enums import *
 
-DEBUG_2=config.DEBUG_2
 
 # Harmonize, given gene g and variant v from source src
 def harmonize_maf( myvar ):
@@ -52,7 +52,7 @@ def harmonize_maf_2( myvar, gene, Fasta ):
         end_aa     = ref_aa_str[-1]
 
         new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'delins' + ins_aa
-        if DEBUG_2:
+        if myglobal.DEBUG_2:
             print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
         return new_myvar
 
@@ -71,7 +71,7 @@ def harmonize_maf_2( myvar, gene, Fasta ):
             end_pos   = start_pos + len(b[1]) - 1
             new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'del'
 
-        if DEBUG_2:
+        if myglobal.DEBUG_2:
             print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
         return new_myvar
 
@@ -94,6 +94,6 @@ def harmonize_maf_2( myvar, gene, Fasta ):
         start_aa  = Fasta[gene]['fasta'][ start_pos - 1 ]
         end_aa    = Fasta[gene]['fasta'][ end_pos   - 1 ]
         new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'ins' + ins_seq
-        if DEBUG_2:
+        if myglobal.DEBUG_2:
             print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
         return new_myvar

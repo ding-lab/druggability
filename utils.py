@@ -78,22 +78,16 @@ def print_thick_line():
     print( '#' * 70 )
 
 def print_output_header():
-    print_thin_line()
-    print( '\t'.join([ '#Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
-    print_thin_line()
 
 def print_output_header_2():
-    print_thin_line()
-    print( '\t'.join([ '#Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ 'Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
-    print_thin_line()
 
 def print_output_header_3():
-    print_thin_line()
-    print( '\t'.join([ '#Sample',                        'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ 'Sample',                        'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
-    print_thin_line()
 
 def print_sample_header( sample, alteration ):
     print_thick_line()
@@ -242,9 +236,20 @@ def print_summary_by_sample( Variant_tracking, Variants, Evidence ):
                     print('')
 
 
+def print_header( t ):
+    # t = variation type
+    if t == 'maf':
+        print_output_header_2()
+    elif t == 'fusion':
+        print_output_header_3()
+    else:
+        abort_run('unknown variant filetype for printing')
+
+
 def print_summary_for_all( Matches, Variants, Evidence, args ):
     bPrintHeader = True
     if not Matches:
+        print_header( args.variation_type )
         logging.info('No matches found!')
         return
     for s in Matches:
@@ -259,13 +264,7 @@ def print_summary_for_all( Matches, Variants, Evidence, args ):
                         t = Evidence[ev_id]
                         match_idx += 1
                         if bPrintHeader:
-                            if args.variation_type == 'maf':
-                                print_output_header_2()
-                            elif args.variation_type == 'fusion':
-                                print_output_header_3()
-                            else:
-                                abort_run('unknown variant filetype for printing')
-
+                            print_header( args.variation_type )
                             bPrintHeader = False
                         db_orig_str     = '{variant}|{gchange}|{refbuild}'.format( variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange'], refbuild=Variants[v_id]['ref_build'] )
                         db_liftover_str = '{variant}|{gchange}|{refbuild}'.format( variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange_liftover'], refbuild=Variants[v_id]['ref_build_liftover'] )

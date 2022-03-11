@@ -3,26 +3,25 @@
 
 import os, sys, csv, re
 import config
+import myglobal
 from utils import *
 from enums import *
 from harmonize import *
 import logging
 
-DEBUG=config.DEBUG
-DEBUG_2=config.DEBUG_2
 
 # accommodate large strings
 csv.field_size_limit( 131072 * 82 )
 
 
 def process_maf( args, Evidence, Variants, Genes, Fasta):
-
-    inputFile = args.variant_file
+    inputFile        = args.variant_file
     Variant_tracking = dict()   # record which samples have which variants
     Matches          = dict()   # matches by sample, separated in 'full' and 'partial' match lists
     maf_filetype     = UNDECLARED
 
-    bReadHeader       = True
+    bReadHeader      = True
+    bHasSampleMatch   = False
 
     tsv_file = open( inputFile )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
@@ -41,8 +40,8 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
                 bReadHeader = False
                 continue
             else:
-                logging.error('Unrecognized maf format')
-                sys.exit(1)
+                abort_run('Unrecognized maf format')
+
 
         if maf_filetype == WASHU_MAF:
             gene         = fields[ 0]
@@ -81,15 +80,18 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
             elif ref == fields[11]:
                 alt = fields[10] if fields[10] != '-' else ''
             else:
-                logging.error('cannot resolve alteration at {gene} {pos}'.format( gene=gene, pos=str(pos_start) ))
-                sys.exit(1)
+                abort_run('cannot resolve alteration at {gene} {pos}'.format( gene=gene, pos=str(pos_start) ))
+
 
             sample_t     = fields[12]   # here, this is tumor sample
             sample_n     = fields[13]   # here, this is (matched) normal sample
             cdnachange   = fields[24]
             aachange     = fields[26]
 
-
+        # Require samples to match
+        if (sample_t != args.tumor_name)  or  (sample_n != args.normal_name):
+            continue
+        bHasSampleMatch = True
 
         # Check whether this gene is mentioned in any database
         if gene not in Genes.keys():
@@ -100,7 +102,7 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
 
         # initially look at only vars with AA change in HGVS short format; if blank, it is often a splice site
         if not re.search( r'^p\.', aachange):
-            if DEBUG_2:
+            if myglobal.DEBUG_2:
                 logging.info( 'maf record IGNORED: ' + alteration_summary )
             continue
 
@@ -182,6 +184,10 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
 
     tsv_file.close()
 
+    if bHasSampleMatch:
+        logging.info('Sample name was mentioned in the input file')
+    else:
+        logging.info('Sample name was NOT mentioned in the input file')
 
     # Print summary
     #print_summary_by_sample( Variant_tracking, Variants, Evidence )
