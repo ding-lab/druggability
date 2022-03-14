@@ -1,0 +1,3 @@
+[submodule "druggability_databases"]
+	path = druggability_databases
+	url = https://github.com/ding-lab/druggability_databases
