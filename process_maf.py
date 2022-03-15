@@ -2,7 +2,7 @@
 # R. Jay Mashl <rmashl@wustl.edu>
 
 import os, sys, csv, re
-import config
+import druggability_databases.config as config
 import myglobal
 from utils import *
 from enums import *

@@ -3,7 +3,7 @@
 
 import sys
 import re
-import config
+import druggability_databases.config as config
 import logging
 import datetime
 

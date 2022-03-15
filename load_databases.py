@@ -2,13 +2,12 @@
 # R. Jay Mashl <rmashl@wustl.edu>
 
 import csv, re
-import config
+import druggability_databases.config as config
 import myglobal
 from utils import *
 from enums import *
 import gzip
 import logging
-
 
 def load_civic(Variants, Genes, VariantAliases):
     # Load preprocessed variants

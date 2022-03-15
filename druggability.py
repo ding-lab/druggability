@@ -2,8 +2,14 @@
 
 # R. Jay Mashl <rmashl@wustl.edu>
 
+import os, sys
+from pathlib import Path
+
+# Update for module location
+sys.path.append(Path(__file__).parent / "druggability_databases")
+
 import getopt
-import os, sys, csv, re
+import csv, re
 import argparse
 import logging
 
