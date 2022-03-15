@@ -18,7 +18,7 @@ from load_databases import *
 from process_maf import *
 from process_fusions import *
 from utils import abort_run
-
+import druggability_databases.config as config
 
 def main( args ):
     Evidence       = dict()   # usage: key= drug, value = dict()
@@ -80,7 +80,8 @@ if __name__ == '__main__':
     logger.info('variation type={}'.format( args.variation_type ))
     logger.info('tumor sample name={}'.format( args.tumor_name ))
     logger.info('normal sample name={}'.format( args.normal_name ))
-    logger.info('database version={}'.format( 'TODO' ))
+    logger.info('civic upstream version={}'.format( config.civic_params['upstream_version'] ))
+    logger.info('civic liftover={}'.format( config.civic_params['ref_build_liftover'] ))
 
     # Validate input and run
     log_timestamp('start time')
