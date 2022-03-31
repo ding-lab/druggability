@@ -53,7 +53,7 @@ if __name__ == '__main__':
     requiredNamed = parser.add_argument_group('required arguments')
     requiredNamed.add_argument('-t', dest='variation_type', type=str, required=True, help='variation type:  maf | fusion')
     requiredNamed.add_argument('-f', dest='variant_file', type=str, required=True, help='variant filename')
-    requiredNamed.add_argument('-tn', dest='tumor_name', type=str, required=True, help='tumor sample name')
+    requiredNamed.add_argument('-tn', dest='tumor_name', type=str, required=True, help='sample or tumor sample name')
     args = parser.parse_args()
 
     # Set up debug level
@@ -72,20 +72,7 @@ if __name__ == '__main__':
     f = open( args.output_file, 'w')
     sys.stdout = f
 
-    # Record run configuration
-    logger = logging.getLogger('runconfig')
-    logger.info('output file={}'.format( args.output_file ))
-    logger.info('log file={}'.format( args.log_file ))
-    logger.info('debug flag count={}'.format( args.debug ))
-    logger.info('variant file={}'.format( args.variant_file ))
-    logger.info('variation type={}'.format( args.variation_type ))
-    logger.info('tumor sample name={}'.format( args.tumor_name ))
-    logger.info('normal sample name={}'.format( args.normal_name ))
-    logger.info('civic upstream version={}'.format( config.civic_params['upstream_version'] ))
-    logger.info('civic liftover={}'.format( config.civic_params['ref_build_liftover'] ))
-
-    # Validate input and run
-    log_timestamp('start time')
+    # Validate input
     if args.variation_type not in ['maf', 'fusion']:
         abort_run('invalid input variation type')
 
@@ -97,5 +84,24 @@ if __name__ == '__main__':
         if args.normal_name != '':
             logging.info('normal sample name will be ignored for fusion input')
 
+    # Record run configuration
+    logger = logging.getLogger('runconfig')
+    logger.info('output file={}'.format( args.output_file ))
+    logger.info('log file={}'.format( args.log_file ))
+    logger.info('debug flag count={}'.format( args.debug ))
+    logger.info('variant file={}'.format( args.variant_file ))
+    logger.info('variation type={}'.format( args.variation_type ))
+    if args.variation_type == 'maf':
+        logger.info('tumor sample name={}'.format( args.tumor_name ))
+        logger.info('normal sample name={}'.format( args.normal_name ))
+    elif args.variation_type == 'fusion':
+        logger.info('sample name={}'.format( args.tumor_name ))
+    else:
+        pass
+    logger.info('civic upstream version={}'.format( config.civic_params['upstream_version'] ))
+    logger.info('civic liftover={}'.format( config.civic_params['ref_build_liftover'] ))
+
+    # Run
+    log_timestamp('start time')
     main( args )
     log_timestamp('end time')
