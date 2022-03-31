@@ -5,9 +5,6 @@
 import os, sys
 from pathlib import Path
 
-# Update for module location
-sys.path.append(Path(__file__).parent / "druggability_databases")
-
 import getopt
 import csv, re
 import argparse
@@ -19,6 +16,10 @@ from process_maf import *
 from process_fusions import *
 from utils import abort_run
 import druggability_databases.config as config
+
+# Update for module location
+myglobal.DBPATH = os.path.dirname( os.path.abspath(__file__)) + '/' + myglobal.DRUGDBDIR
+
 
 def main( args ):
     Evidence       = dict()   # usage: key= drug, value = dict()

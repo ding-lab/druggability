@@ -11,7 +11,7 @@ import logging
 
 def load_civic(Variants, Genes, VariantAliases):
     # Load preprocessed variants
-    tsv_file = open( config.civic_files['variants_preprocessed'])
+    tsv_file = open( myglobal.DBPATH + '/' + config.civic_files['variants_preprocessed'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
     num_vars_read=0
@@ -117,7 +117,7 @@ def load_civic(Variants, Genes, VariantAliases):
 
 
     # Load (modified) native file to get more information
-    tsv_file = open( config.civic_files['variants'])
+    tsv_file = open( myglobal.DBPATH + '/' + config.civic_files['variants'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
     hdr_civic_variants = []    # field names
@@ -211,7 +211,7 @@ def load_civic(Variants, Genes, VariantAliases):
 
 
 def load_oncokb(Variants, Genes, VariantAliases):
-    tsv_file = open( config.oncokb_files['variants'])
+    tsv_file = open( myglobal.DBPATH + '/' + config.oncokb_files['variants'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
     hdr_oncokb_variants = []    # field names
@@ -317,7 +317,7 @@ def load_oncokb(Variants, Genes, VariantAliases):
 
 
 def load_civic_evidence( Evidence, Variants ):
-    tsv_file = open( config.civic_files['evidence'])
+    tsv_file = open( myglobal.DBPATH + '/' + config.civic_files['evidence'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     hdr_civic_evidence = []    # field names
 
@@ -363,7 +363,7 @@ def load_civic_evidence( Evidence, Variants ):
 
 def load_oncokb_evidence( Evidence, Variants ):
     # Reopen alterations file to load evidence
-    tsv_file = open( config.oncokb_files['variants'])
+    tsv_file = open( myglobal.DBPATH + '/' + config.oncokb_files['variants'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     hdr_oncokb_evidence = []    # field names
 
@@ -413,7 +413,7 @@ def load_oncokb_evidence( Evidence, Variants ):
 
 
 def load_oncokb_therapeutics(Evidence, Variants, Genes):
-    tsv_file = open( config.oncokb_files['therapeutics'])
+    tsv_file = open( myglobal.DBPATH + '/' + config.oncokb_files['therapeutics'])
     read_tsv = csv.reader(tsv_file, delimiter='\t')
 
     for row in read_tsv:
@@ -443,7 +443,7 @@ def load_oncokb_therapeutics(Evidence, Variants, Genes):
 
 
 def load_fasta( Fasta ):
-    tsv_file = gzip.open( config.uniprot_files['fasta'], mode='rt')
+    tsv_file = gzip.open( myglobal.DBPATH + '/' + config.uniprot_files['fasta'], mode='rt')
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
 
