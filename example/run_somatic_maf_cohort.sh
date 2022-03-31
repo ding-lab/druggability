@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# main script
-DRUGGABILITY=../druggability.py
+# main script. Druggability databases are a submodule called druggability_databases
+DRUGGABILITY=~/git/druggability/druggability.py
 
 # Provide the location of a test maf; here, this is a cancer cohort
 cohort_maf=../Test_files/LUAD.Somatic.050919.mnp.annot.maf
