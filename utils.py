@@ -6,6 +6,7 @@ import re
 import druggability_databases.config as config
 import logging
 import datetime
+from enums import *
 
 def abort_run( msg ):
     logging.error( msg )
@@ -204,7 +205,10 @@ def calculate_gdna_change( variant_set, liftover_status ):
         end_pos   = variant_set['pos1']
 
 
-    # check
+    # Determine mutation type (exclude fusions to avoid adding 'delins' attribute
+    if variant_set['main_variant_class'] == FUSION:
+        return '{chrom}:g.{start}_{stop}'.format( chrom=chrom, start=start_pos, stop=end_pos )
+
     if (not len(ref)) and (    len(alt)):
         if (int(end_pos) - int(start_pos)) != 1:
             logging.info('(TODO) positions may describe duplication rathern than insertion ({gene} at g.{pos})'.format( gene=gene, pos=start_pos ))
