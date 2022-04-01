@@ -78,15 +78,15 @@ def print_thick_line():
     print( '#' * 70 )
 
 def print_output_header():
-    print( '\t'.join([ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
 
 def print_output_header_2():
-    print( '\t'.join([ 'Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ 'Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
 
 def print_output_header_3():
-    print( '\t'.join([ 'Sample',                        'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Unchecked_Criteria',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+    print( '\t'.join([ 'Sample',                        'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
            'Evidence_Level', 'Clinical_Significance',  'Citation']) )
 
 def print_sample_header( sample, alteration ):

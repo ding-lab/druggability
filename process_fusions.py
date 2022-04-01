@@ -74,20 +74,21 @@ def process_fusions( args, Evidence, Variants, Genes):
                     if  Variants[v_id]['main_variant_class'] == FUSION:
 
                         # Determine full vs partial gene match (wildcard gene is handled implicitly)
+                        # The field 'reason' corresponds to criteria met and currently refers to gene-level matches
                         myoverlap = intersection( genes, Variants[v_id]['fusion_gene_set'] )
-                        num_hits = len( intersection( genes, Variants[v_id]['fusion_gene_set'] ) )
+                        num_hits  = len( myoverlap )
                         if num_hits == 2:
 
                             if Variants[v_id]['pp_conditions'] == 1:   # no additional criteria
                                 check_alloc_match( Matches, Sample )
-                                list_append( Matches[ Sample ]['full'], {'v_id': v_id, 'reason': '-', 'called': FusionName} )   # unchecked criteria
+                                list_append( Matches[ Sample ]['full'], {'v_id': v_id, 'reason': ';'.join(myoverlap), 'called': FusionName} )   # unchecked criteria
                             else:
                                 check_alloc_match( Matches, Sample )
-                                list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': Variants[v_id]['pp_condition2_value'], 'called': FusionName} )
+                                list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': ';'.join(myoverlap), 'called': FusionName} )
 
                         elif num_hits == 1:
                             check_alloc_match( Matches, Sample )
-                            list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': 'matched ' + str(myoverlap[0]), 'called': FusionName} )
+                            list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': ';'.join(myoverlap), 'called': FusionName} )
                         else:
                             pass
 
