@@ -113,8 +113,11 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
             if re.search(r'>', aachange) or re.search('ins', aachange) or re.search(r'del$', aachange):
                 aachange = harmonize_maf_2( aachange, gene, Fasta )
 
+        # As this is a maf, assume no fusions
+        main_variant_class = MUTATION
+
         # calculate gdna change
-        tmp_set = { 'chrom': chrom, 'pos0': pos_start, 'pos1': pos_end, 'ref': ref, 'alt': alt, 'gene': gene }
+        tmp_set = { 'chrom': chrom, 'pos0': pos_start, 'pos1': pos_end, 'ref': ref, 'alt': alt, 'gene': gene, 'main_variant_class': main_variant_class }
         gdnachange = calculate_gdna_change( tmp_set, '' )
         gdnacoords = calculate_gdna_coords( tmp_set, '' )
 
