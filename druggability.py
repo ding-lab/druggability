@@ -66,7 +66,7 @@ if __name__ == '__main__':
     mylogfile = args.log_file
     if os.path.exists( mylogfile ):
         os.remove( mylogfile )
-    logging.basicConfig( filename = mylogfile, level=logging.DEBUG)
+    logging.basicConfig( filename = mylogfile, level=0)
 
     # Redirect output
     f = open( args.output_file, 'w')
@@ -86,6 +86,7 @@ if __name__ == '__main__':
 
     # Record run configuration
     logger = logging.getLogger('runconfig')
+    logger.setLevel(0)
     logger.info('output file={}'.format( args.output_file ))
     logger.info('log file={}'.format( args.log_file ))
     logger.info('debug flag count={}'.format( args.debug ))

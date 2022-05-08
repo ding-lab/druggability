@@ -9,6 +9,8 @@ from enums import *
 from harmonize import *
 import logging
 
+logger = logging.getLogger(__name__)
+logger.setLevel(0)
 
 # accommodate large strings
 csv.field_size_limit( 131072 * 82 )
@@ -103,7 +105,7 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
         # initially look at only vars with AA change in HGVS short format; if blank, it is often a splice site
         if not re.search( r'^p\.', aachange):
             if myglobal.DEBUG_2:
-                logging.info( 'maf record IGNORED: ' + alteration_summary )
+                logger.info( 'maf record IGNORED: ' + alteration_summary )
             continue
 
         # harmonize
@@ -188,9 +190,9 @@ def process_maf( args, Evidence, Variants, Genes, Fasta):
     tsv_file.close()
 
     if bHasSampleMatch:
-        logging.info('Sample name was mentioned in the input file')
+        logger.info('Sample name was mentioned in the input file')
     else:
-        logging.info('Sample name was NOT mentioned in the input file')
+        logger.info('Sample name was NOT mentioned in the input file')
 
     # Print summary
     #print_summary_by_sample( Variant_tracking, Variants, Evidence )

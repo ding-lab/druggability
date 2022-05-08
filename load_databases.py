@@ -9,6 +9,9 @@ from enums import *
 import gzip
 import logging
 
+logger = logging.getLogger(__name__)
+logger.setLevel(0)
+
 def load_civic(Variants, Genes, VariantAliases):
     # Load preprocessed variants
     tsv_file = open( myglobal.DBPATH + '/' + config.civic_files['variants_preprocessed'])
@@ -35,13 +38,13 @@ def load_civic(Variants, Genes, VariantAliases):
         if num_conditions == 0:    # ignore entry
             num_vars_ignored += 1
             if myglobal.DEBUG_2:
-                logging.info(' '.join( ['preprocessed IGNORED:', variant_id, fields[1],variant,variant_types_str] ))
+                logger.info(' '.join( ['preprocessed IGNORED:', variant_id, fields[1],variant,variant_types_str] ))
             continue
 
         if re.search(r'amplification|copy number|exon|expression|loss|microsatellite|mutation|nuclear|phosphorylation|promoter|splice|tandem|truncating|wildtype|domain', variant.lower(), re.IGNORECASE):
             num_vars_ignored += 1
             if myglobal.DEBUG_2:
-                logging.info(' '.join( ['preprocessed IGNORED(variant name):', variant_id, fields[1],variant,variant_types_str] ))
+                logger.info(' '.join( ['preprocessed IGNORED(variant name):', variant_id, fields[1],variant,variant_types_str] ))
             continue
 
         # Classify variant
@@ -69,7 +72,7 @@ def load_civic(Variants, Genes, VariantAliases):
             x0, x1 = get_pos_range( variant )
 
         if myglobal.DEBUG_2:
-            logging.info( '(civic) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
+            logger.info( '(civic) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
 
         # Instantiate record
         Variants[variant_id] = {
@@ -112,8 +115,8 @@ def load_civic(Variants, Genes, VariantAliases):
 
     tsv_file.close()
     if myglobal.DEBUG:
-        logging.info('num preprocessed civic variant records read: ' + str(num_vars_read))
-        logging.info('num preprocessed civic variant records ignored: ' + str(num_vars_ignored))
+        logger.info('num preprocessed civic variant records read: ' + str(num_vars_read))
+        logger.info('num preprocessed civic variant records ignored: ' + str(num_vars_ignored))
 
 
     # Load (modified) native file to get more information
@@ -145,7 +148,7 @@ def load_civic(Variants, Genes, VariantAliases):
 
         # Accepted variant
         if myglobal.DEBUG_2:
-            logging.info(' '.join( ['Accepted:', variant_id, fields[1] + ' as ' + Variants[variant_id]['gene'], fields[3]] ))
+            logger.info(' '.join( ['Accepted:', variant_id, fields[1] + ' as ' + Variants[variant_id]['gene'], fields[3]] ))
 
         # Update information
         chrom = fields[ 7].replace('chr','')
@@ -205,8 +208,8 @@ def load_civic(Variants, Genes, VariantAliases):
 
     tsv_file.close()
     if myglobal.DEBUG:
-        logging.info('num civic variant records read: ' + str(num_vars_read))
-        logging.info('num civic variant records ignored: ' + str(num_vars_ignored))
+        logger.info('num civic variant records read: ' + str(num_vars_read))
+        logger.info('num civic variant records ignored: ' + str(num_vars_ignored))
 
 
 
@@ -264,8 +267,8 @@ def load_oncokb(Variants, Genes, VariantAliases):
             x0, x1 = get_pos_range( variant )
 
         if myglobal.DEBUG_2:
-            logging.info(' '.join( ['oncokb variant ALLOWED:', variant_id, gene, variant, 'class='+str(main_variant_class)] ))
-            logging.info( '(oncokb) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
+            logger.info(' '.join( ['oncokb variant ALLOWED:', variant_id, gene, variant, 'class='+str(main_variant_class)] ))
+            logger.info( '(oncokb) ' + variant + ' is range ' + str(x0) + ' - ' + str(x1))
 
 
         # Instantiate record
@@ -312,8 +315,8 @@ def load_oncokb(Variants, Genes, VariantAliases):
 
     tsv_file.close()
     if myglobal.DEBUG:
-        logging.info('num oncokb variant records read (initial pass): %s' %  (num_vars_read))
-        logging.info('num oncokb variant records ignored (initial pass): %s' % (num_vars_ignored))
+        logger.info('num oncokb variant records read (initial pass): %s' %  (num_vars_read))
+        logger.info('num oncokb variant records ignored (initial pass): %s' % (num_vars_ignored))
 
 
 def load_civic_evidence( Evidence, Variants ):
@@ -408,8 +411,8 @@ def load_oncokb_evidence( Evidence, Variants ):
 
     tsv_file.close()
     if myglobal.DEBUG:
-        logging.info('num oncokb variant records read (second pass): %s' % (num_vars_read))
-        logging.info('num oncokb variant records ignored (second pass): %s' % (num_vars_ignored))
+        logger.info('num oncokb variant records read (second pass): %s' % (num_vars_read))
+        logger.info('num oncokb variant records ignored (second pass): %s' % (num_vars_ignored))
 
 
 def load_oncokb_therapeutics(Evidence, Variants, Genes):

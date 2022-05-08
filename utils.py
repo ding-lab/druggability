@@ -8,12 +8,15 @@ import logging
 import datetime
 from enums import *
 
+logger = logging.getLogger(__name__)
+logger.setLevel(0)
+
 def abort_run( msg ):
-    logging.error( msg )
+    logger.error( msg )
     sys.exit(1)
 
 def log_timestamp( label ):
-    logging.info('{}: {}'.format(label, datetime.datetime.now() ))
+    logger.info('{}: {}'.format(label, datetime.datetime.now() ))
 
 # Convert list to string
 def list2str( mylist ):
@@ -211,7 +214,7 @@ def calculate_gdna_change( variant_set, liftover_status ):
 
     if (not len(ref)) and (    len(alt)):
         if (int(end_pos) - int(start_pos)) != 1:
-            logging.info('(TODO) positions may describe duplication rathern than insertion ({gene} at g.{pos})'.format( gene=gene, pos=start_pos ))
+            logger.info('(TODO) positions may describe duplication rathern than insertion ({gene} at g.{pos})'.format( gene=gene, pos=start_pos ))
             return ''
         return '{chrom}:g.{start}_{stop}ins{alt}'.format( chrom=chrom, start=start_pos, stop=end_pos, alt=alt )
 
@@ -254,7 +257,7 @@ def print_summary_for_all( Matches, Variants, Evidence, args ):
     bPrintHeader = True
     if not Matches:
         print_header( args.variation_type )
-        logging.info('No matches found!')
+        logger.info('No matches found!')
         return
     for s in Matches:
         match_idx = 0

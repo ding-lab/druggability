@@ -8,6 +8,9 @@ from utils import *
 from enums import *
 import logging
 
+logger = logging.getLogger(__name__)
+logger.setLevel(0)
+
 def process_fusions( args, Evidence, Variants, Genes):
     inputFile         = args.variant_file
     Variant_tracking  = dict()   # record variants by sample
@@ -110,9 +113,9 @@ def process_fusions( args, Evidence, Variants, Genes):
     tsv_file.close()
 
     if bHasSampleMatch:
-        logging.info('Sample name was mentioned in the input file')
+        logger.info('Sample name was mentioned in the input file')
     else:
-        logging.info('Sample name was NOT mentioned in the input file')
+        logger.info('Sample name was NOT mentioned in the input file')
 
     # Print summary by sample
     # print_summary_by_sample( Variant_tracking, Variants, Evidence )

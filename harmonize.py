@@ -5,7 +5,10 @@ import re
 import druggability_databases.config as config
 import myglobal
 from enums import *
+import logging
 
+logger = logging.getLogger(__name__)
+logger.setLevel(0)
 
 # Harmonize, given gene g and variant v from source src
 def harmonize_maf( myvar ):
@@ -24,7 +27,7 @@ def fix_synonymous( myvar ):
     if m is not None:
         return ''.join([ m[1], m[2], m[1] ])
     else:
-        print('# ERROR: unexpected synonymous variant format')
+        logger.warning('Unexpected synonymous variant format: %s' % ( myvar ))
 
 
 def harmonize_maf_2( myvar, gene, Fasta ):
@@ -36,13 +39,13 @@ def harmonize_maf_2( myvar, gene, Fasta ):
     if re.search(r'>', myvar):
         a = myvar.split('>')
         if len(a) != 2:
-            print('ERROR: unexpected split of delins variant %s in union maf' % ( myvar ))
+            logger.warning('Unexpected input format of delins variant from union maf. Leaving unharmonized as %s' % ( myvar ))
             return myvar
         ins_aa = a[1]
 
         b = a[0].split('_')
         if len(b) != 2:
-            print('ERROR: no range reported in delins variant %s in union maf' % ( myvar ))
+            logger.warning('No range reported in delins variant from union maf. Leaving unharmonized as %s' % ( myvar ))
             return myvar
         start_pos  = int(b[0])
         c          = re.search(r'^(\d+)([A-Y]{2,})$', b[1])
@@ -52,15 +55,15 @@ def harmonize_maf_2( myvar, gene, Fasta ):
         end_aa     = ref_aa_str[-1]
 
         new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'delins' + ins_aa
-        if myglobal.DEBUG_2:
-            print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
+
+        logger.info('Reformatted %s -> %s in union maf' % ( myvar, new_myvar ))
         return new_myvar
 
     if re.search(r'del$', myvar):
         a = myvar[ 0 : len(myvar) - 3 ]
         b = re.search(r'([A-Y]+)([0-9]+)', a)
         if b is None:
-            print('ERROR: unable to parse del variant %s in union maf' % (myvar))
+            logger.warning('Unable to parse del variant from union maf. Leaving unharmonized as %s' % (myvar))
             return myvar
         if len(b[1]) == 1:
             new_myvar = myvar
@@ -71,14 +74,14 @@ def harmonize_maf_2( myvar, gene, Fasta ):
             end_pos   = start_pos + len(b[1]) - 1
             new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'del'
 
-        if myglobal.DEBUG_2:
-            print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
+
+        logger.info('Reformatted %s -> %s in union maf' % ( myvar, new_myvar ))
         return new_myvar
 
     if re.search(r'ins', myvar):
         b = re.search(r'^(\d+)(_)(\d+)(ins)(\D*)$', myvar)
         if b is None:
-            print('ERROR: unable to parse ins variant %s in union maf' % (myvar))
+            logger.warning('Unable to parse ins variant from union maf. Leaving unharmonized as %s' % (myvar))
             return myvar
 
         if re.search(r'ins$', myvar):   # check to provide blank due to optional
@@ -89,11 +92,11 @@ def harmonize_maf_2( myvar, gene, Fasta ):
 
         # Use amino acid lookup to reformat
         if gene not in Fasta.keys():
-            print('ERROR: unable to reformat variant %s in union maf: gene %s does not exist among fasta sequences' % (myvar, gene))
+            logger.warning('Unable to reformat variant %s in union maf: gene %s does not exist among fasta sequences' % (myvar, gene))
             return myvar
         start_aa  = Fasta[gene]['fasta'][ start_pos - 1 ]
         end_aa    = Fasta[gene]['fasta'][ end_pos   - 1 ]
         new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'ins' + ins_seq
-        if myglobal.DEBUG_2:
-            print('# union maf: reformat %s -> %s' % ( myvar, new_myvar ))
+
+        logger.info('Reformatted %s -> %s in union maf' % ( myvar, new_myvar ))
         return new_myvar
