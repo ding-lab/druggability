@@ -34,6 +34,10 @@ def main( args ):
     # Load evidence from CIViC
     load_civic_evidence( Evidence, Variants )
 
+    # Load fasta sequences
+    load_fasta( Fasta )
+
+    # call main processing
     if args.variation_type == 'maf':
         process_maf( args, Evidence, Variants, Genes, Fasta)
 
