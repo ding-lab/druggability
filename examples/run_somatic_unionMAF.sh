@@ -8,7 +8,7 @@ cohort_maf=../Test_files/PanCan_Union_Maf_Broad_WashU_v1.1.maf
 
 
 # Get samples
-cut -f18,19 $cohort_maf | sort -u | grep -v -i barcode > case_pairs.tsv
+tail -n +2 $cohort_maf | cut -f18,19 | sort -u > case_pairs.tsv
 
 cat case_pairs.tsv | while read line ; do
     read tumor_sample normal_sample <<< $(echo "$line" | cut -d$'\t' -f 1,2)
