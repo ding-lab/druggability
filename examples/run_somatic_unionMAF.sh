@@ -6,11 +6,13 @@ DRUGGABILITY=~/git/druggability/druggability.py
 # Provide the location of a test maf; here, this is a cancer cohort
 cohort_maf=../Test_files/PanCan_Union_Maf_Broad_WashU_v1.1.maf
 
+# case pairs file
+case_pairs_file=case_pairs.1.tsv
 
 # Get samples
-tail -n +2 $cohort_maf | cut -f18,19 | sort -u > case_pairs.tsv
+tail -n +2 $cohort_maf | cut -f18,19 | sort -u > $case_pairs_file
 
-cat case_pairs.tsv | while read line ; do
+cat $case_pairs_file | while read line ; do
     read tumor_sample normal_sample <<< $(echo "$line" | cut -d$'\t' -f 1,2)
     OUTDIR=run_somatic_unionMAF_output
     mkdir -p $OUTDIR
