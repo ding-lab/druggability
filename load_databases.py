@@ -1,7 +1,7 @@
 
 # R. Jay Mashl <rmashl@wustl.edu>
 
-import csv, re
+import os.path, csv, re
 import druggability_databases.config as config
 import myglobal
 from utils import *
@@ -14,7 +14,7 @@ logger.setLevel(0)
 
 def load_civic(Variants, Genes, VariantAliases):
     # Load preprocessed variants
-    tsv_file = open( myglobal.DBPATH + '/' + config.civic_files['variants_preprocessed'])
+    tsv_file = open( os.path.join( myglobal.DBPATH, config.civic_files['variants_preprocessed']) )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
     num_vars_read=0
@@ -120,7 +120,7 @@ def load_civic(Variants, Genes, VariantAliases):
 
 
     # Load (modified) native file to get more information
-    tsv_file = open( myglobal.DBPATH + '/' + config.civic_files['variants'])
+    tsv_file = open( os.path.join(myglobal.DBPATH, config.civic_files['variants']) )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
     hdr_civic_variants = []    # field names
@@ -214,7 +214,7 @@ def load_civic(Variants, Genes, VariantAliases):
 
 
 def load_oncokb(Variants, Genes, VariantAliases):
-    tsv_file = open( myglobal.DBPATH + '/' + config.oncokb_files['variants'])
+    tsv_file = open( os.path.join(myglobal.DBPATH, config.oncokb_files['variants']) )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
     hdr_oncokb_variants = []    # field names
@@ -320,7 +320,7 @@ def load_oncokb(Variants, Genes, VariantAliases):
 
 
 def load_civic_evidence( Evidence, Variants ):
-    tsv_file = open( myglobal.DBPATH + '/' + config.civic_files['evidence'])
+    tsv_file = open( os.path.join(myglobal.DBPATH, config.civic_files['evidence']) )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     hdr_civic_evidence = []    # field names
 
@@ -366,7 +366,7 @@ def load_civic_evidence( Evidence, Variants ):
 
 def load_oncokb_evidence( Evidence, Variants ):
     # Reopen alterations file to load evidence
-    tsv_file = open( myglobal.DBPATH + '/' + config.oncokb_files['variants'])
+    tsv_file = open( os.path.join(myglobal.DBPATH, config.oncokb_files['variants']) )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     hdr_oncokb_evidence = []    # field names
 
@@ -416,7 +416,7 @@ def load_oncokb_evidence( Evidence, Variants ):
 
 
 def load_oncokb_therapeutics(Evidence, Variants, Genes):
-    tsv_file = open( myglobal.DBPATH + '/' + config.oncokb_files['therapeutics'])
+    tsv_file = open( os.path.join(myglobal.DBPATH, config.oncokb_files['therapeutics']) )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
 
     for row in read_tsv:
@@ -446,7 +446,7 @@ def load_oncokb_therapeutics(Evidence, Variants, Genes):
 
 
 def load_fasta( Fasta ):
-    tsv_file = gzip.open( myglobal.DBPATH + '/' + config.uniprot_files['fasta'], mode='rt')
+    tsv_file = gzip.open( os.path.join(myglobal.DBPATH, config.uniprot_files['fasta']), mode='rt')
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
 
@@ -462,3 +462,58 @@ def load_fasta( Fasta ):
         gene, fa_header, fa_seq = fields
         Fasta[ gene ] = {'fasta': fa_seq}
     tsv_file.close()
+
+
+def load_trials( Trials, trials_keyword ):
+    for i in VARIANT_CLASSES:
+        Trials[ i ] = dict()
+
+    tsv_file = open( os.path.join(myglobal.DBPATH, config.trials_files[ trials_keyword ]['summary_file']) )
+    read_tsv = csv.reader(tsv_file, delimiter='\t')
+    bReadHeader = True
+    for row in read_tsv:
+        fields = [ s.strip() for s in row ]
+        study                     = fields[ 0]
+        b_involves_genomics       = fields[ 3]
+        genes_str                 = fields[ 5]
+        alteration_str            = fields[ 6]
+        position_str              = fields[ 7]
+        b_has_addl_requirement    = fields[ 8]
+        genes_additional_str      = fields[ 9]
+        alteration_additional_str = fields[10]
+        position_additional_str   = fields[11]
+        exclusions_str            = fields[12]
+        intervention              = fields[13]
+        overall_status            = fields[14]
+
+        # skip blanks
+        if not re.search(r'^NCT', study):
+            continue
+
+        # Alteration definitions:
+        # mutation      = point mutation, indel, or fusion
+        # rearrangement = indel or fusion
+        if b_involves_genomics == "yes":  # trials having known genomic targets
+
+            for gene in clean_split( genes_str ):
+                for alteration_type in clean_split( alteration_str ):   # mutation, fusion, none, indel
+                    check_alloc_named( Trials[ map_mut(alteration_type) ], gene, 'dict' )
+
+                    if alteration_type == "none":  # indicates wild type
+                        pos = 'none'
+                        check_alloc_named( Trials[ map_mut(alteration_type) ][ gene ], pos, 'list' )
+                        Trials[ map_mut(alteration_type) ][ gene ][ pos ].append( {'trial_id': study,
+                                                                                   'intervention': intervention,
+                                                                                   'overall_status': overall_status,
+                                                                                   'position_target': '-',
+                        })
+                    else:
+                        if not len( position_str.strip() ):    # catch blank entries
+                            abort_run('In trials db, the target is missing for trial={trial}' . format( trial=study ))
+                        for pos in clean_split( position_str ):
+                            check_alloc_named( Trials[ map_mut(alteration_type) ][ gene ], pos, 'list' )
+                            Trials[ map_mut(alteration_type) ][ gene ][ pos ].append( {'trial_id': study,
+                                                                                       'intervention': intervention,
+                                                                                       'overall_status': overall_status,
+                                                                                       'position_target': pos,
+                            })

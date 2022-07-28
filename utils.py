@@ -58,9 +58,16 @@ def is_pattern_aa_match( aachange, v_id, Variants ):
     else:
         return False
 
-def check_alloc_match( Matches, key ):
-    if key not in Matches.keys():
-        Matches[ key ] = {'full': [], 'partial': []}
+def check_alloc_named( obj, key, s ):
+    if key not in obj.keys():
+        if s == 'list':
+            obj[ key ] = []
+        elif s == 'dict':
+            obj[ key ] = dict()
+        elif s == 'match_level':
+            obj[ key ] = {'full': [], 'partial': [], 'wildtype': dict()}
+        else:
+            abort_run('Unexpected allocation type request')
     return
 
 def format_citations( mylist ):
@@ -214,7 +221,7 @@ def calculate_gdna_change( variant_set, liftover_status ):
 
     if (not len(ref)) and (    len(alt)):
         if (int(end_pos) - int(start_pos)) != 1:
-            logger.info('(TODO) positions may describe duplication rathern than insertion ({gene} at g.{pos})'.format( gene=gene, pos=start_pos ))
+            logger.info('(TODO) positions may describe duplication rather than insertion ({gene} at g.{pos})'.format( gene=gene, pos=start_pos ))
             return ''
         return '{chrom}:g.{start}_{stop}ins{alt}'.format( chrom=chrom, start=start_pos, stop=end_pos, alt=alt )
 
@@ -252,12 +259,27 @@ def print_header( t ):
     else:
         abort_run('unknown variant filetype for printing')
 
+def print_aux_header( ff ):
+    print( *[ 'Sample', 'Disease', 'Variant_class', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status'], sep = '\t', file = ff)
 
-def print_summary_for_all( Matches, Variants, Evidence, args ):
+# given a list as a string, return an array of the items
+def clean_split( s ):
+    return [i.strip() for i in re.split(',|;', s)]  # semicolon can appear in maf input
+
+# map mutation type
+def map_mut( s ):
+    the_map = {'mutation': MUTATION, 'indel': INDEL, 'fusion': FUSION, 'none': WILDTYPE}
+    return the_map[s]
+
+def map_mut_reverse( s ):
+    the_map = {MUTATION: 'mutation', INDEL: 'indel', FUSION: 'fusion', WILDTYPE: 'wildtype'}
+    return the_map[s]
+
+def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
     bPrintHeader = True
     if not Matches:
         print_header( args.variation_type )
-        logger.info('No matches found!')
+        logger.info('No matches to alteration db found!')
         return
     for s in Matches:
         match_idx = 0
@@ -282,3 +304,29 @@ def print_summary_for_all( Matches, Variants, Evidence, args ):
                             print( *[ s,                                  match_idx, called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
                         else:
                             pass
+
+        # output the matches to trials
+        if len(args.annotate_trials):
+            ff = open( args.trials_auxiliary_output_file, 'w' )
+            print_aux_header( ff )
+            if len( args.annotate_trials ):
+                for matchtype in [ WILDTYPE ]:
+                    if len(Matches_trials[s][matchtype]):
+                        for wt_gene in Matches_trials[s][matchtype]:
+                            for ct in Matches_trials[s][matchtype][wt_gene]:
+                                print( *[ s, args.annotate_trials, map_mut_reverse(matchtype), wt_gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']], sep = '\t', file = ff)
+                if( args.variation_type == 'fusion' ):
+                    for matchtype in [ FUSION ]:
+                        if len(Matches_trials[s][matchtype]):
+                            for gene in Matches_trials[s][matchtype]:
+                                for ct in Matches_trials[s][matchtype][gene]:
+                                    print( *[ s, args.annotate_trials, map_mut_reverse(matchtype), gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']], sep = '\t', file = ff)
+
+                if( args.variation_type == 'maf' ):
+                    for matchtype in [ MUTATION, INDEL ]:
+                        if len(Matches_trials[s][matchtype]):
+                            for gene in Matches_trials[s][matchtype]:
+                                for ct in Matches_trials[s][matchtype][gene]:
+                                    print( *[ s, args.annotate_trials, map_mut_reverse(matchtype), gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']], sep = '\t', file = ff)
+
+            ff.close()

@@ -1,21 +1,21 @@
 
 # R. Jay Mashl <rmashl@wustl.edu>
 
-import os, sys, csv, re
+import csv, re
 import druggability_databases.config as config
 import myglobal
 from utils import *
 from enums import *
 import logging
+from annotate_trials import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(0)
 
-def process_fusions( args, Evidence, Variants, Genes):
+def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Trials, Matches_trials ):
     inputFile         = args.variant_file
     Variant_tracking  = dict()   # record variants by sample
     fusion_filetype   = UNDECLARED
-    Matches           = dict()   # matches by sample, separated in 'full' and 'partial' match lists
 
     hdr               = []    # column headers
     expected_hdr      = ['FusionName', 'LeftBreakpoint', 'RightBreakpoint', 'Sample', 'JunctionReadCount', 'SpanningFragCount', 'FFPM', 'PROT_FUSION_TYPE']
@@ -49,7 +49,6 @@ def process_fusions( args, Evidence, Variants, Genes):
             fields = fields[2:]
 
         # Process entry
-
         FusionName, LeftBreakpoint, RightBreakpoint, Sample, JunctionReadCount, SpanningFragCount, FFPM, PROT_FUSION_TYPE = fields[0:8]
 
         # Require sample to match
@@ -60,7 +59,7 @@ def process_fusions( args, Evidence, Variants, Genes):
         # summarize alteration
         alteration_summary = '\t'.join([ FusionName, LeftBreakpoint, RightBreakpoint ])
 
-        # Set up storage for tracking matches
+        # Set up storage for tracking matches with alteration db
         if Sample not in Variant_tracking.keys():
             Variant_tracking[ Sample ] = dict()
         Variant_tracking[ Sample ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
@@ -70,8 +69,9 @@ def process_fusions( args, Evidence, Variants, Genes):
         for g in FusionName.split('--'):
             genes.append(  g.split('.')[0] )   # remove transcript identifier
 
-        # Identify matches
+        # Identify matches with alteration db
         for g in genes:
+            Genes_altered[ g ] = 1
             if g in Genes.keys():
                 for v_id in Genes[g]:
                     if  Variants[v_id]['main_variant_class'] == FUSION:
@@ -82,26 +82,26 @@ def process_fusions( args, Evidence, Variants, Genes):
                         num_hits  = len( myoverlap )
                         if num_hits == 2:
                             if Variants[v_id]['pp_conditions'] == 1:   # no additional criteria
-                                check_alloc_match( Matches, Sample )
+                                check_alloc_named( Matches, Sample, 'match_level' )
                                 list_append( Matches[ Sample ]['full'], {'v_id': v_id, 'reason': '1.druggable gene pair::no additional criteria', 'called': FusionName} )
                             else:
-                                check_alloc_match( Matches, Sample )
+                                check_alloc_named( Matches, Sample, 'match_level' )
                                 list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '2.druggable gene pair::additional criteria not applied', 'called': FusionName} )
 
                         elif num_hits == 1:
                             if '*' in Variants[v_id]['fusion_gene_set']:  # wildcard present
                                 if Variants[v_id]['pp_conditions'] == 1:   # no additional criteria
-                                    check_alloc_match( Matches, Sample )
+                                    check_alloc_named( Matches, Sample, 'match_level' )
                                     list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '3.druggable gene with nonspecific partner::no additional criteria', 'called': FusionName} )
                                 else:
-                                    check_alloc_match( Matches, Sample )
+                                    check_alloc_named( Matches, Sample, 'match_level' )
                                     list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '4.druggable gene with nonspecific partner::additional criteria not applied', 'called': FusionName} )
                             else:  # just one partner matched
                                 if Variants[v_id]['pp_conditions'] == 1:   # no additional criteria
-                                    check_alloc_match( Matches, Sample )
+                                    check_alloc_named( Matches, Sample, 'match_level' )
                                     list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '5.possibly druggable gene with nonmatching partner::no additional criteria', 'called': FusionName} )
                                 else:
-                                    check_alloc_match( Matches, Sample )
+                                    check_alloc_named( Matches, Sample, 'match_level' )
                                     list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '6.possibly druggable gene with nonmatching partner::additional criteria not applied', 'called': FusionName} )
 
                         else:
@@ -112,12 +112,18 @@ def process_fusions( args, Evidence, Variants, Genes):
 
     tsv_file.close()
 
+    # Record sample status
     if bHasSampleMatch:
         logger.info('Sample name was mentioned in the input file')
     else:
         logger.info('Sample name was NOT mentioned in the input file')
 
-    # Print summary by sample
-    # print_summary_by_sample( Variant_tracking, Variants, Evidence )
-
-    print_summary_for_all( Matches, Variants, Evidence, args )
+    # Evaluate gene lists related to trials
+    if len(args.annotate_trials) and bHasSampleMatch:
+        Sample = args.tumor_name
+        evaluate_trials_fusion( Trials, Genes_altered, Sample, Matches_trials )
+        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials )
+        fusion_seen = ','.join(sorted(Matches_trials[ Sample ][ FUSION   ].keys()))
+        wt_seen     = ','.join(sorted(Matches_trials[ Sample ][ WILDTYPE ].keys()))
+        logger.info('Altered genes having FUSIONS allowed by trials:' + (fusion_seen if len(fusion_seen) else 'n/a'))
+        logger.info('Non-altered genes allowed by trials:'            + (wt_seen     if len(wt_seen)     else 'n/a'))
