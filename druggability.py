@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     # Process command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', dest='output_file', type=str, required=False, help='output filename', default='druggability.out')
+    parser.add_argument('-o', dest='output_file', type=str, required=False, help='alteration database matches', default='alterations.out')
     parser.add_argument('-l', dest='log_file', type=str, required=False, help='logfile name', default='druggability.log')
     parser.add_argument('-d', '--debug', action='count', default=0)
     parser.add_argument('-nn', dest='normal_name', type=str, required=False, help='normal sample name', default='')
