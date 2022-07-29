@@ -1,12 +1,12 @@
 
 # R. Jay Mashl <rmashl@wustl.edu>
 
-import sys
-import re
+import os, sys, re
 import druggability_databases.config as config
 import logging
 import datetime
 from enums import *
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 logger.setLevel(0)
@@ -88,17 +88,25 @@ def print_thin_line():
 def print_thick_line():
     print( '#' * 70 )
 
-def print_output_header():
-    print( '\t'.join([ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
-           'Evidence_Level', 'Clinical_Significance',  'Citation']) )
 
-def print_output_header_2():
-    print( '\t'.join([ 'Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
-           'Evidence_Level', 'Clinical_Significance',  'Citation']) )
+header_maf_list       = [ 'Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+                          'Evidence_Level', 'Clinical_Significance',  'Citation']
+header_fusion_list    = [ 'Sample',                        'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+                          'Evidence_Level', 'Clinical_Significance',  'Citation']
+header_by_sample_list = [ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+                          'Evidence_Level', 'Clinical_Significance',  'Citation']
+header_aux_list       = [ 'Sample', 'Disease', 'Variant_class', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status']
 
-def print_output_header_3():
-    print( '\t'.join([ 'Sample',                        'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
-           'Evidence_Level', 'Clinical_Significance',  'Citation']) )
+def print_header( var_mode ):
+    if var_mode == 'maf':
+        print( '\t'.join(header_maf_list) )
+    elif var_mode == 'fusion':
+        print( '\t'.join(header_fusion_list) )
+    elif var_mode == 'by_sample':   # currently unused
+        print( '\t'.join(header_by_sample_list) )
+    else:
+        abort_run('unknown variant mode/filetype for printing')
+
 
 def print_sample_header( sample, alteration ):
     print_thick_line()
@@ -106,6 +114,43 @@ def print_sample_header( sample, alteration ):
     print( '\t'.join([ '### Hugo_Symbol', 'Chromosome', 'Start_Position', 'AA_change', 'Variant_Type']))
     print( '### ' + alteration )
     print_thick_line()
+
+
+def condense_genes( df ):
+    # remove copies
+    df = df.drop_duplicates()
+
+    # group genes
+    header_aux_list_groupby = header_aux_list.copy()
+    header_aux_list_groupby.remove('Gene')
+    df = df.sort_values( by=['Gene'] )
+    df = df.groupby( header_aux_list_groupby )['Gene'].apply(','.join).reset_index()
+    df = df.reindex( columns = header_aux_list )
+
+    # combine genes in same family
+    for idx, row in df.iterrows():
+        genelist = row['Gene'].split(',')
+        base_genes = dict()
+        if len(genelist) > 1:
+            for g in genelist:
+                m = re.match(r'(.*)(\d+)', g)
+                if m is None:  #  no numerical suffix
+                    check_alloc_named( base_genes, g, 'list' )
+                    base_genes[ g ].append( '' )
+                else:          # numerical suffix
+                    check_alloc_named( base_genes, m[1], 'list' )
+                    base_genes[ m[1] ].append( m[2] )
+        else:
+            check_alloc_named( base_genes, genelist[0], 'list' )
+            base_genes[ genelist[0] ] = ''
+
+        gene_families = []
+        for gf in sorted(base_genes.keys()):
+            gene_families.append( str(gf) + '/'.join(base_genes[gf]) )
+        df.at[idx,'Gene'] = ','.join(gene_families)
+
+    return df
+
 
 def intersection( lst1, lst2 ):
     return list( set(lst1)  &  set(lst2) )
@@ -240,7 +285,7 @@ def print_summary_by_sample( Variant_tracking, Variants, Evidence ):
                 this_alt = Variant_tracking[sample][alteration]
                 if this_alt['total_evidence_count']:
                     print_sample_header( sample, alteration )
-                    print_output_header()
+                    print_header('by_sample')
                     for v_id in this_alt['v_id_list']:
                         for ev_id in Variants[v_id]['evidence_list']:
                             t = Evidence[ev_id]
@@ -249,18 +294,6 @@ def print_summary_by_sample( Variant_tracking, Variants, Evidence ):
                     print('')
                     print('')
 
-
-def print_header( t ):
-    # t = variation type
-    if t == 'maf':
-        print_output_header_2()
-    elif t == 'fusion':
-        print_output_header_3()
-    else:
-        abort_run('unknown variant filetype for printing')
-
-def print_aux_header( ff ):
-    print( *[ 'Sample', 'Disease', 'Variant_class', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status'], sep = '\t', file = ff)
 
 # given a list as a string, return an array of the items
 def clean_split( s ):
@@ -307,26 +340,26 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
 
         # output the matches to trials
         if len(args.annotate_trials):
-            ff = open( args.trials_auxiliary_output_file, 'w' )
-            print_aux_header( ff )
-            if len( args.annotate_trials ):
-                for matchtype in [ WILDTYPE ]:
+            aux_output_lines = []
+            for matchtype in [ WILDTYPE ]:
+                if len(Matches_trials[s][matchtype]):
+                    for wt_gene in Matches_trials[s][matchtype]:
+                        for ct in Matches_trials[s][matchtype][wt_gene]:
+                            aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse(matchtype), wt_gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']])
+            if( args.variation_type == 'fusion' ):
+                for matchtype in [ FUSION ]:
                     if len(Matches_trials[s][matchtype]):
-                        for wt_gene in Matches_trials[s][matchtype]:
-                            for ct in Matches_trials[s][matchtype][wt_gene]:
-                                print( *[ s, args.annotate_trials, map_mut_reverse(matchtype), wt_gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']], sep = '\t', file = ff)
-                if( args.variation_type == 'fusion' ):
-                    for matchtype in [ FUSION ]:
-                        if len(Matches_trials[s][matchtype]):
-                            for gene in Matches_trials[s][matchtype]:
-                                for ct in Matches_trials[s][matchtype][gene]:
-                                    print( *[ s, args.annotate_trials, map_mut_reverse(matchtype), gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']], sep = '\t', file = ff)
+                        for gene in Matches_trials[s][matchtype]:
+                            for ct in Matches_trials[s][matchtype][gene]:
+                                aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse(matchtype), gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']])
+            if( args.variation_type == 'maf' ):
+                for matchtype in [ MUTATION, INDEL ]:
+                    if len(Matches_trials[s][matchtype]):
+                        for gene in Matches_trials[s][matchtype]:
+                            for ct in Matches_trials[s][matchtype][gene]:
+                                aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse(matchtype), gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']])
 
-                if( args.variation_type == 'maf' ):
-                    for matchtype in [ MUTATION, INDEL ]:
-                        if len(Matches_trials[s][matchtype]):
-                            for gene in Matches_trials[s][matchtype]:
-                                for ct in Matches_trials[s][matchtype][gene]:
-                                    print( *[ s, args.annotate_trials, map_mut_reverse(matchtype), gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']], sep = '\t', file = ff)
-
-            ff.close()
+            # use pandas to prepare output
+            df = pd.DataFrame( aux_output_lines, columns = header_aux_list )
+            df = condense_genes( df )
+            df.to_csv( args.trials_auxiliary_output_file, sep = '\t', header=True, index=False)
