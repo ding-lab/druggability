@@ -89,9 +89,9 @@ def print_thick_line():
     print( '#' * 70 )
 
 
-header_maf_list       = [ 'Tumor_Sample', 'Normal_Sample', 'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+header_maf_list       = [ 'Tumor_Sample', 'Normal_Sample', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
                           'Evidence_Level', 'Clinical_Significance',  'Citation']
-header_fusion_list    = [ 'Sample',                        'Match_Index', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+header_fusion_list    = [ 'Sample',                        'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
                           'Evidence_Level', 'Clinical_Significance',  'Citation']
 header_by_sample_list = [ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
                           'Evidence_Level', 'Clinical_Significance',  'Citation']
@@ -116,7 +116,29 @@ def print_sample_header( sample, alteration ):
     print_thick_line()
 
 
-def condense_genes( df ):
+def condense_altmatch_output( df, var_mode ):
+    # remove copies
+    df = df.drop_duplicates()
+
+    # group citations
+    if var_mode == 'maf':
+        header_orig    = header_maf_list.copy()
+        header_groupby = header_maf_list.copy()
+    elif var_mode == 'fusion':
+        header_orig    = header_fusion_list.copy()
+        header_groupby = header_fusion_list.copy()
+    else:
+        abort_run('unknown variant mode/filetype in condense')
+    header_groupby.remove('Citation')
+
+    df = df.sort_values( by=df.columns.to_list() )
+    df = df.groupby( header_groupby )['Citation'].apply(','.join).reset_index()
+    df = df.reindex( columns = header_orig )
+    df = df.sort_values( by=['Criteria_Met','Called'] )
+    return df
+
+
+def condense_trials_output( df ):
     # remove copies
     df = df.drop_duplicates()
 
@@ -309,11 +331,17 @@ def map_mut_reverse( s ):
     return the_map[s]
 
 def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
-    bPrintHeader = True
+
+    altmatch_output_lines = []
     if not Matches:
-        print_header( args.variation_type )
+        orig_stdout = sys.stdout
+        with open( args.output_file, 'w') as f:
+            sys.stdout = f
+            print_header( args.variation_type )
+            sys.stdout = orig_stdout
         logger.info('No matches to alteration db found!')
         return
+
     for s in Matches:
         match_idx = 0
         for matchtype in ['full', 'partial']:
@@ -325,18 +353,25 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
                     for ev_id in Variants[v_id]['evidence_list']:
                         t = Evidence[ev_id]
                         match_idx += 1
-                        if bPrintHeader:
-                            print_header( args.variation_type )
-                            bPrintHeader = False
                         db_orig_str     = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange'], refbuild=Variants[v_id]['ref_build'] )
                         db_liftover_str = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange_liftover'], refbuild=Variants[v_id]['ref_build_liftover'] )
                         if args.variation_type == 'maf':
-                            print( *[ s.split('||')[0], s.split('||')[1], match_idx, called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            altmatch_output_lines.append( [ s.split('||')[0], s.split('||')[1], called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
 
                         elif args.variation_type == 'fusion':
-                            print( *[ s,                                  match_idx, called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])], sep = '\t')
+                            altmatch_output_lines.append( [ s,                                  called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
                         else:
                             pass
+
+        # use pandas to prepare output
+        if args.variation_type == 'maf':
+            df = pd.DataFrame( altmatch_output_lines, columns = header_maf_list )
+        elif args.variation_type == 'fusion':
+            df = pd.DataFrame( altmatch_output_lines, columns = header_fusion_list )
+        else:
+            abort_run('unknown variant mode/filetype for printing')
+        df = condense_altmatch_output( df, args.variation_type )
+        df.to_csv( args.output_file, sep = '\t', header=True, index=False)
 
         # output the matches to trials
         if len(args.annotate_trials):
@@ -361,5 +396,5 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
 
             # use pandas to prepare output
             df = pd.DataFrame( aux_output_lines, columns = header_aux_list )
-            df = condense_genes( df )
+            df = condense_trials_output( df )
             df.to_csv( args.trials_auxiliary_output_file, sep = '\t', header=True, index=False)

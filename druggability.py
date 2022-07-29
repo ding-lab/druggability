@@ -108,9 +108,9 @@ if __name__ == '__main__':
             list_trials()
             abort_run('keyword ' + args.annotate_trials + ' does not have clinical trials annotations')
 
-    # Redirect output
-    f = open( args.output_file, 'w')
-    sys.stdout = f
+
+
+
 
     # Record run configuration
     logger = logging.getLogger('runconfig')

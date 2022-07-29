@@ -36,6 +36,7 @@ required arguments:
 ```
 Notes:
 - The code is developed with cohort input files in mind and so it's best run as part of a loop. See the `examples` directory for script templates.
+- The test variant files are not distributed; please contact us.
 - For fusion inputs, the "tumor name" is thought of as any sample, normal or tumor.
 
 ### MAF examples:
