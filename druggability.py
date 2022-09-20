@@ -27,7 +27,8 @@ def main( args ):
     Fasta          = dict()   # fasta sequences for reformatting variants
     Trials         = dict()   # clinical trials records
     Genes_altered  = dict()   # genes seen in input variant file
-    Matches_trials = dict()   # trials matches by sample with breakdown by variant classes
+    Matches_trials = dict()   # trials matches by sample with breakdown by variant classes; disqualified trials are a one-off key element
+    Gene_sets      = dict()   # named gene sets/classes appearing trials
 
     # load variant summary from CIViC
     load_civic( Variants, Genes, VariantAliases)
@@ -40,14 +41,19 @@ def main( args ):
 
     # Load clinical trials
     if len(args.annotate_trials):
-        load_trials( Trials, args.annotate_trials )
+        load_gene_sets( Gene_sets )
+        load_trials( Trials, args.annotate_trials, Gene_sets )
 
     # call main processing
-    if args.variation_type == 'maf':
-        process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials )
+    if args.variation_type == 'maf':    # somatic maf
+        process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, 'somatic' )
 
-    if args.variation_type == 'fusion':
-        process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Trials, Matches_trials )
+    if args.variation_type == 'fusion':   # somatic fusions
+        process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Trials, Matches_trials, 'somatic' )
+
+    # Evaluate trial disqualifications
+    if len(args.annotate_trials):
+        evaluate_trials_disqualifications( Matches_trials )
 
     # Report results
     print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials )
@@ -100,7 +106,7 @@ if __name__ == '__main__':
 
     if args.variation_type == 'fusion':
         if len(args.normal_name):
-            logging.info('normal sample name will be ignored for fusion input')
+            logger.info('normal sample name will be ignored for fusion input')
 
     args.annotate_trials = args.annotate_trials.lower()
     if len(args.annotate_trials):

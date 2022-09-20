@@ -66,6 +66,10 @@ def check_alloc_named( obj, key, s ):
             obj[ key ] = dict()
         elif s == 'match_level':
             obj[ key ] = {'full': [], 'partial': [], 'wildtype': dict()}
+        elif s == 'trial':
+            obj[ key ] = dict()
+            for i in VARIANT_CLASSES:
+                obj[ key ][ i ] = dict()  # keys are the positions
         else:
             abort_run('Unexpected allocation type request')
     return
@@ -323,12 +327,18 @@ def clean_split( s ):
 
 # map mutation type
 def map_mut( s ):
-    the_map = {'mutation': MUTATION, 'indel': INDEL, 'fusion': FUSION, 'none': WILDTYPE}
+    the_map = {'mutation': MUTATION, 'insertion': INSERTION, 'deletion': DELETION, 'fusion': FUSION, 'none': WILDTYPE}
     return the_map[s]
 
 def map_mut_reverse( s ):
-    the_map = {MUTATION: 'mutation', INDEL: 'indel', FUSION: 'fusion', WILDTYPE: 'wildtype'}
+    the_map = {MUTATION: 'mutation', INSERTION: 'insertion', DELETION: 'deletion', FUSION: 'fusion', WILDTYPE: 'wildtype'}
     return the_map[s]
+
+def list_disqualified_trials( disquals ):
+    mylist = []
+    for i in disquals:
+        mylist.append( disquals['trial_id'] )
+    return uniquify( mylist )
 
 def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
 
@@ -375,24 +385,17 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
 
         # output the matches to trials
         if len(args.annotate_trials):
+            disqualified_trials_list = list_disqualified_trials( Matches_trials[s][DISQUALIFYING] )
+            logger.info('Sample {} had {} disqualifying clinical trial events'.format( s, len(Matches_trials[s][ DISQUALIFYING ])))
+            logger.info('Disqualified trials: {}'.format( 'none' if not disqualified_trials_list else ','.join( disqualified_trials_list ) ))
+
             aux_output_lines = []
-            for matchtype in [ WILDTYPE ]:
-                if len(Matches_trials[s][matchtype]):
-                    for wt_gene in Matches_trials[s][matchtype]:
-                        for ct in Matches_trials[s][matchtype][wt_gene]:
-                            aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse(matchtype), wt_gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']])
-            if( args.variation_type == 'fusion' ):
-                for matchtype in [ FUSION ]:
-                    if len(Matches_trials[s][matchtype]):
-                        for gene in Matches_trials[s][matchtype]:
-                            for ct in Matches_trials[s][matchtype][gene]:
-                                aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse(matchtype), gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']])
-            if( args.variation_type == 'maf' ):
-                for matchtype in [ MUTATION, INDEL ]:
-                    if len(Matches_trials[s][matchtype]):
-                        for gene in Matches_trials[s][matchtype]:
-                            for ct in Matches_trials[s][matchtype][gene]:
-                                aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse(matchtype), gene, ct['position_target'], ct['trial_id'], ct['intervention'], ct['overall_status']])
+            for vt in VARIANT_CLASSES:   # reminder: wt, ins, del, mut, fusion
+                if len( Matches_trials[s][ vt ] ):
+                    for gene in Matches_trials[s][ vt ]:
+                        for ct_info in Matches_trials[s][ vt ][ gene ]:
+                            if ct_info['trial_id'] not in disqualified_trials_list:
+                                aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse( vt ), gene, ct_info['position_target'], ct_info['trial_id'], ct_info['intervention'], ct_info['overall_status']])
 
             # use pandas to prepare output
             df = pd.DataFrame( aux_output_lines, columns = header_aux_list )

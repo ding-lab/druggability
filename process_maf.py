@@ -17,7 +17,8 @@ logger.setLevel(0)
 csv.field_size_limit( 131072 * 82 )
 
 
-def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials ):
+# Process somatic mafs
+def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, call_mode ):
     inputFile        = args.variant_file
     Variant_tracking = dict()   # record variants by sample
     maf_filetype     = UNDECLARED
@@ -33,9 +34,10 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
 
     # Track genes lists having matches to trials
     GenesSeenInTrials = dict()
-    for alt_type in [ MUTATION, INDEL ]:
+    for alt_type in [ MUTATION, INSERTION, DELETION ]:
         GenesSeenInTrials[ alt_type ] = []
 
+    # Set up storage
     if len(args.annotate_trials):
         check_alloc_named( Matches_trials, sample_pair, 'dict')
         for vc in VARIANT_CLASSES:
@@ -204,51 +206,78 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
         # Check for potentially relevant trials
         if len(args.annotate_trials) and bHasSampleMatch:
 
-            if( re.search(r'[SDOTM]NP', vartype) ):
-                if( gene in Trials[ MUTATION ].keys() ):
-                    GenesSeenInTrials[ MUTATION ].append( gene )
+            if re.search(r'[SDOTM]NP', vartype):
+                if gene in Trials.keys():
+                    if len( Trials[ gene ][ MUTATION ].keys() ):
+                        GenesSeenInTrials[ MUTATION ].append( gene )
 
-                    # check for 'any'
-                    if( 'any' in Trials[ MUTATION ][ gene ].keys() ):
-                        check_alloc_named( Matches_trials[ sample_pair ][ MUTATION ], gene, 'list' )
-                        Matches_trials[ sample_pair ][ MUTATION ][ gene ].extend( Trials[ MUTATION ][ gene ][ 'any' ] )
-                        if myglobal.DEBUG:
-                            logger.info('{gene} matched -any- trials for xNP' . format(gene=gene))
+                        # check for nonspecific match
+                        if 'any' in Trials[ gene ][ MUTATION ].keys():
+                            check_alloc_named( Matches_trials[ sample_pair ][ MUTATION ], gene, 'list' )
+                            Matches_trials[ sample_pair ][ MUTATION ][ gene ].extend( Trials[ gene ][ MUTATION ][ 'any' ] )
+                            if myglobal.DEBUG:
+                                logger.info('{gene} matched -any- trials for xNP' . format(gene=gene))
 
-                    # also check for aachanges "as is" or with 'any' alternative allele
-                    for p in clean_split( aachange ):
+                        # check for aachanges "as is" or with 'any' alternative allele tag
+                        p = aachange
                         m = re.search(r'([A-Z]\d+)(.*)', p )
                         any_probe = m.groups()[0] + ':any:'
 
                         if myglobal.DEBUG:
                             logger.info('we will check for vartype={x1}, gene={x2}, pos={x3}, any={x4}' . format(x1=vartype, x2=gene, x3=p, x4=any_probe))
 
-                        if( p         in Trials[ MUTATION ][ gene ].keys() ):
+                        if  p         in Trials[ gene ][ MUTATION ].keys():
                             check_alloc_named( Matches_trials[ sample_pair ][ MUTATION ], gene, 'list' )
-                            Matches_trials[ sample_pair ][ MUTATION ][ gene ].extend( Trials[ MUTATION ][ gene ][ p ] )
+                            Matches_trials[ sample_pair ][ MUTATION ][ gene ].extend( Trials[ gene ][ MUTATION ][ p ] )
                             if myglobal.DEBUG:
                                 logger.info('...matched aachange as {}' . format(p))
 
-                        if( any_probe in Trials[ MUTATION ][ gene ].keys() ):
+                        if any_probe in Trials[ gene ][ MUTATION ].keys():
                             check_alloc_named( Matches_trials[ sample_pair ][ MUTATION ], gene, 'list' )
-                            Matches_trials[ sample_pair ][ MUTATION ][ gene ].extend( Trials[ MUTATION ][ gene ][ any_probe ] )
+                            Matches_trials[ sample_pair ][ MUTATION ][ gene ].extend( Trials[ gene ][ MUTATION ][ any_probe ] )
                             if myglobal.DEBUG:
                                 logger.info('...matched aachange as any probe {}' . format(any_probe))
 
-            elif( vartype in ['INS', 'DEL'] ):
-                if( gene in Trials[ INDEL ].keys() ):
-                    GenesSeenInTrials[ INDEL ].append( gene )
+                        # check for genomic coordinate
+                        gc_probe = ':'.join([ chrom, pos_start, pos_end, ref, alt ])
+                        if gc_probe in Trials[ gene ][ MUTATION ].keys():
+                            check_alloc_named( Matches_trials[ sample_pair ][ MUTATION ], gene, 'list' )
+                            Matches_trials[ sample_pair ][ MUTATION ][ gene ].extend( Trials[ gene ][ MUTATION ][ gc_probe ] )
+                            if myglobal.DEBUG:
+                                logger.info('...matched aachange as any probe {}' . format(gc_probe))
 
-                    # check for 'any'
-                    if( 'any' in Trials[ INDEL ][ gene ].keys() ):
-                        check_alloc_named( Matches_trials[ sample_pair ][ INDEL ], gene, 'list' )
-                        Matches_trials[ sample_pair ][ INDEL ][ gene ].extend( Trials[ INDEL ][ gene ][ 'any' ] )
-                        if myglobal.DEBUG:
-                            logger.info('{gene} matched -any- trials for indel' . format(gene=gene))
 
-                    # also check for aachanges "as is" or with 'any' alternative allele
-                    # currently there are none such
-                    pass
+            elif vartype in ['INS', 'DEL']:
+                for vt in [ INSERTION, DELETION ]:
+                    if gene in Trials.keys():
+                        if len( Trials[ gene ][ vt ].keys() ):
+                            GenesSeenInTrials[ vt ].append( gene )
+
+                            # check for nonspecific match
+                            if 'any' in Trials[ gene ][ vt ].keys():
+                                check_alloc_named( Matches_trials[ sample_pair ][ vt ], gene, 'list' )
+                                Matches_trials[ sample_pair ][ vt ][ gene ].extend( Trials[ gene ][ vt ][ 'any' ] )
+                                if myglobal.DEBUG:
+                                    logger.info('{gene} matched -any- trials for {vartype}' . format(gene=gene, vartype=map_mut_reverse(vt)))
+
+                            # check for aachanges "as is"
+                            if vt == INSERTION:
+                                if alt in Trials[ gene ][ vt ].keys():
+                                    check_alloc_named( Matches_trials[ sample_pair ][ vt ], gene, 'list' )
+                                    Matches_trials[ sample_pair ][ vt ][ gene ].extend( Trials[ gene ][ vt ][ alt ] )
+                                    if myglobal.DEBUG:
+                                        logger.info('{gene} matched trials for {vartype} with alteration {alteration}' . format(gene=gene, vartype=map_mut_reverse(vt), alteration=alt))
+
+                            elif vt == DELETION:
+                                if ref in Trials[ gene ][ vt ].keys():
+                                    check_alloc_named( Matches_trials[ sample_pair ][ vt ], gene, 'list' )
+                                    Matches_trials[ sample_pair ][ vt ][ gene ].extend( Trials[ gene ][ vt ][ ref ] )
+                                    if myglobal.DEBUG:
+                                        logger.info('{gene} matched trials for {vartype} with alteration {alteration}' . format(gene=gene, vartype=map_mut_reverse(vt), alteration=ref))
+
+                            else:
+                                pass
+
             else:
                 logger.warning('Unexpected vartype {} in input variant file' . format(vartype) )
 
@@ -265,18 +294,25 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
         Sample = sample_pair
 
         # Wildtypes
-        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials )
+        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, 'somatic' )
 
         # Evaluate gene lists related to trials
-        GenesSeenInTrials['all_types'] = []    # one-off key
-        for var_type in [ MUTATION, INDEL ]:
+        GenesSeenInTrials['all_types'] = []    # one-off key to store combined gene list
+        for var_type in [ MUTATION, INSERTION, DELETION ]:
             GenesSeenInTrials[ var_type ] = uniquify(GenesSeenInTrials[ var_type ])
             GenesSeenInTrials['all_types'].extend( GenesSeenInTrials[ var_type ] )
         GenesSeenInTrials['all_types'] = uniquify(GenesSeenInTrials['all_types'])
-        mut_seen        = ','.join(sorted( GenesSeenInTrials[MUTATION] ))
-        indel_seen      = ','.join(sorted( GenesSeenInTrials[INDEL] ))
-        wt_genes_trials = [ x for x in Trials[ WILDTYPE ].keys()]
+        mut_seen  =  ','.join(sorted( GenesSeenInTrials[MUTATION]  ))
+        ins_seen  =  ','.join(sorted( GenesSeenInTrials[INSERTION] ))
+        del_seen  =  ','.join(sorted( GenesSeenInTrials[DELETION]  ))
+
+        wt_genes_trials = []
+        for xgene in Trials.keys():
+            if len( Trials[ xgene ][ WILDTYPE ].keys() ):
+                wt_genes_trials.append( xgene )
+
         wt_seen         = ','.join(sorted( filter(lambda i: i not in GenesSeenInTrials['all_types'], wt_genes_trials) ))
-        logger.info('Altered genes having MUTATIONS allowed by trials:' + (mut_seen   if len(mut_seen)   else 'n/a'))
-        logger.info('Altered genes having INDELS allowed by trials:'    + (indel_seen if len(indel_seen) else 'n/a'))
-        logger.info('Non-altered genes allowed by trials:'              + (wt_seen    if len(wt_seen)    else 'n/a'))
+        logger.info('Altered genes having MUTATIONS allowed by trials:'  + (mut_seen if len(mut_seen) else 'n/a'))
+        logger.info('Altered genes having INSERTIONS allowed by trials:' + (ins_seen if len(ins_seen) else 'n/a'))
+        logger.info('Altered genes having DELETIONS allowed by trials:'  + (del_seen if len(del_seen) else 'n/a'))
+        logger.info('Non-altered genes allowed by trials:'               + (wt_seen  if len(wt_seen ) else 'n/a'))

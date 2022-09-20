@@ -464,56 +464,96 @@ def load_fasta( Fasta ):
     tsv_file.close()
 
 
-def load_trials( Trials, trials_keyword ):
-    for i in VARIANT_CLASSES:
-        Trials[ i ] = dict()
+def load_gene_sets( Gene_sets ):
+    for gene_set_name in config.gene_lists.keys():
+        Gene_sets[ gene_set_name ] = []
+        with open( os.path.join(myglobal.DBPATH, config.gene_lists[ gene_set_name ]['filename']) ) as tsv_file:
+            read_tsv = csv.reader(tsv_file, delimiter='\t')
+            for row in read_tsv:
+                fields = [ s.strip() for s in row ]
+                if re.search('^#', row[0]):
+                    continue
+                Gene_sets[ gene_set_name ].append( row[0] )
+        Gene_sets[ gene_set_name ] = uniquify( Gene_sets[ gene_set_name ] )
 
-    tsv_file = open( os.path.join(myglobal.DBPATH, config.trials_files[ trials_keyword ]['summary_file']) )
+
+# Load trial data
+def load_trials( Trials, trials_keyword, Gene_sets ):
+    ipf =  os.path.join(myglobal.DBPATH, config.trials_files[ trials_keyword ]['summary_file'])
+    logger.info('Reading trials file {}'.format( ipf ))
+    tsv_file = open( ipf )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
     bReadHeader = True
+    read_cnt = 0
     for row in read_tsv:
         fields = [ s.strip() for s in row ]
-        study                     = fields[ 0]
-        b_involves_genomics       = fields[ 3]
-        genes_str                 = fields[ 5]
-        alteration_str            = fields[ 6]
-        position_str              = fields[ 7]
-        b_has_addl_requirement    = fields[ 8]
-        genes_additional_str      = fields[ 9]
-        alteration_additional_str = fields[10]
-        position_additional_str   = fields[11]
-        exclusions_str            = fields[12]
-        intervention              = fields[13]
-        overall_status            = fields[14]
 
-        # skip blanks
-        if not re.search(r'^NCT', study):
+        # Skip header
+        if re.search('^Study', fields[0]):
+            bReadHeader = False
+            continue
+        if bReadHeader:
             continue
 
-        # Alteration definitions:
-        # mutation      = point mutation, indel, or fusion
-        # rearrangement = indel or fusion
-        if b_involves_genomics == "yes":  # trials having known genomic targets
+        study                     = fields[ 0]    # study id
+        b_involves_genomics       = fields[ 3]    # yes/no: if yes, load the information
+        call_mode                 = fields[ 5]    # germline or somatic
+        genes_str                 = fields[ 6]    # list of genes
+        alteration_str            = fields[ 7]    # alteration types (i.e., one of our variant classes)
+        position_str              = fields[ 8]    # list of loci/alterations
+        b_has_addl_requirement    = fields[ 9]
+        genes_additional_str      = fields[10]
+        alteration_additional_str = fields[11]
+        position_additional_str   = fields[12]
+        exclusions_str            = fields[13]
+        intervention              = fields[14]
+        overall_status            = fields[15]
 
-            for gene in clean_split( genes_str ):
-                for alteration_type in clean_split( alteration_str ):   # mutation, fusion, none, indel
-                    check_alloc_named( Trials[ map_mut(alteration_type) ], gene, 'dict' )
+        # skip blanks
+        if not len(study):
+            continue
+        read_cnt += 1
 
+        if b_involves_genomics == "yes":
+
+            # QC
+            if alteration_str == 'any':
+                abort_run('In trials input, alteration type <any> is not allowed. Please list variant types explicitly. Exiting...')
+
+            # Resolve named gene lists
+            m = re.search(':(.*):', genes_str)
+            if m is not None:
+                gene_list_name = m[0].replace(':','')
+                this_gene_list = Gene_sets[ gene_list_name ]
+            else:
+                this_gene_list = clean_split( genes_str )
+
+            for gene in this_gene_list:
+                check_alloc_named( Trials, gene, 'trial' )
+
+                for alteration_type in clean_split( alteration_str ):
                     if alteration_type == "none":  # indicates wild type
                         pos = 'none'
-                        check_alloc_named( Trials[ map_mut(alteration_type) ][ gene ], pos, 'list' )
-                        Trials[ map_mut(alteration_type) ][ gene ][ pos ].append( {'trial_id': study,
+                        check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ], pos, 'list' )
+                        eligibility_type = DISQUALIFYING if re.search(':disqualifying:', position_str) else QUALIFYING
+                        Trials[ gene ][ map_mut(alteration_type) ][ pos ].append( {'trial_id': study,
                                                                                    'intervention': intervention,
                                                                                    'overall_status': overall_status,
                                                                                    'position_target': '-',
-                        })
+                                                                                   'eligibility_type': eligibility_type,
+                                                                                   'call_mode': call_mode,
+                                                                                   })
                     else:
-                        if not len( position_str.strip() ):    # catch blank entries
-                            abort_run('In trials db, the target is missing for trial={trial}' . format( trial=study ))
+                        if not len( position_str ):
+                            abort_run('in trials input file: the position target is missing for trial={trial}' . format( trial=study ))
                         for pos in clean_split( position_str ):
-                            check_alloc_named( Trials[ map_mut(alteration_type) ][ gene ], pos, 'list' )
-                            Trials[ map_mut(alteration_type) ][ gene ][ pos ].append( {'trial_id': study,
+                            check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ], pos, 'list' )
+                            eligibility_type = DISQUALIFYING if re.search(':disqualifying:', pos) else QUALIFYING
+                            Trials[ gene ][ map_mut(alteration_type) ][ pos ].append( {'trial_id': study,
                                                                                        'intervention': intervention,
                                                                                        'overall_status': overall_status,
-                                                                                       'position_target': pos,
-                            })
+                                                                                       'position_target': pos.replace(':disqualifying:',''),
+                                                                                       'eligibility_type': eligibility_type,
+                                                                                       'call_mode': call_mode,
+                                                                                       })
+    logger.info('Read {} lines from clinical trials data'.format( read_cnt ))
