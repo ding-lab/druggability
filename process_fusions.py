@@ -60,6 +60,8 @@ def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Tr
         alteration_summary = '\t'.join([ FusionName, LeftBreakpoint, RightBreakpoint ])
 
         # Set up storage for tracking matches with alteration db
+        check_alloc_named( Matches, Sample, 'match_level' )
+
         if Sample not in Variant_tracking.keys():
             Variant_tracking[ Sample ] = dict()
         Variant_tracking[ Sample ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
@@ -82,26 +84,20 @@ def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Tr
                         num_hits  = len( myoverlap )
                         if num_hits == 2:
                             if Variants[v_id]['pp_conditions'] == 1:   # no additional criteria
-                                check_alloc_named( Matches, Sample, 'match_level' )
                                 list_append( Matches[ Sample ]['full'], {'v_id': v_id, 'reason': '1.druggable gene pair::no additional criteria', 'called': FusionName} )
                             else:
-                                check_alloc_named( Matches, Sample, 'match_level' )
                                 list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '2.druggable gene pair::additional criteria not applied', 'called': FusionName} )
 
                         elif num_hits == 1:
                             if '*' in Variants[v_id]['fusion_gene_set']:  # wildcard present
                                 if Variants[v_id]['pp_conditions'] == 1:   # no additional criteria
-                                    check_alloc_named( Matches, Sample, 'match_level' )
                                     list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '3.druggable gene with nonspecific partner::no additional criteria', 'called': FusionName} )
                                 else:
-                                    check_alloc_named( Matches, Sample, 'match_level' )
                                     list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '4.druggable gene with nonspecific partner::additional criteria not applied', 'called': FusionName} )
                             else:  # just one partner matched
                                 if Variants[v_id]['pp_conditions'] == 1:   # no additional criteria
-                                    check_alloc_named( Matches, Sample, 'match_level' )
                                     list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '5.possibly druggable gene with nonmatching partner::no additional criteria', 'called': FusionName} )
                                 else:
-                                    check_alloc_named( Matches, Sample, 'match_level' )
                                     list_append( Matches[ Sample ]['partial'], {'v_id': v_id, 'reason': '6.possibly druggable gene with nonmatching partner::additional criteria not applied', 'called': FusionName} )
 
                         else:

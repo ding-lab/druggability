@@ -341,47 +341,52 @@ def list_disqualified_trials( disquals ):
     return uniquify( mylist )
 
 def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
+    for s in Matches:                  # legacy loop over samples
+        altmatch_output_lines = []     # output for raw matches to "alt"erations
 
-    altmatch_output_lines = []
-    if not Matches:
-        orig_stdout = sys.stdout
-        with open( args.output_file, 'w') as f:
-            sys.stdout = f
-            print_header( args.variation_type )
-            sys.stdout = orig_stdout
-        logger.info('No matches to alteration db found!')
-        return
-
-    for s in Matches:
-        match_idx = 0
+        # Check whether there are results
+        num_results = 0
         for matchtype in ['full', 'partial']:
-            if len(Matches[s][matchtype]):
-                for dic in Matches[s][matchtype]:
-                    v_id   = dic['v_id']
-                    reason = dic['reason']
-                    called = dic['called']
-                    for ev_id in Variants[v_id]['evidence_list']:
-                        t = Evidence[ev_id]
-                        match_idx += 1
-                        db_orig_str     = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange'], refbuild=Variants[v_id]['ref_build'] )
-                        db_liftover_str = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange_liftover'], refbuild=Variants[v_id]['ref_build_liftover'] )
-                        if args.variation_type == 'maf':
-                            altmatch_output_lines.append( [ s.split('||')[0], s.split('||')[1], called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
+            num_results += len(Matches[s][matchtype])
 
-                        elif args.variation_type == 'fusion':
-                            altmatch_output_lines.append( [ s,                                  called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
-                        else:
-                            pass
+        if num_results == 0:
+            orig_stdout = sys.stdout
+            with open( args.output_file, 'w') as f:
+                sys.stdout = f
+                print_header( args.variation_type )
+                sys.stdout = orig_stdout
+                logger.info('No matches to alteration db found!')
 
-        # use pandas to prepare output
-        if args.variation_type == 'maf':
-            df = pd.DataFrame( altmatch_output_lines, columns = header_maf_list )
-        elif args.variation_type == 'fusion':
-            df = pd.DataFrame( altmatch_output_lines, columns = header_fusion_list )
         else:
-            abort_run('unknown variant mode/filetype for printing')
-        df = condense_altmatch_output( df, args.variation_type )
-        df.to_csv( args.output_file, sep = '\t', header=True, index=False)
+            match_idx = 0
+            for matchtype in ['full', 'partial']:
+                if len(Matches[s][matchtype]):
+                    for dic in Matches[s][matchtype]:
+                        v_id   = dic['v_id']
+                        reason = dic['reason']
+                        called = dic['called']
+                        for ev_id in Variants[v_id]['evidence_list']:
+                            t = Evidence[ev_id]
+                            match_idx += 1
+                            db_orig_str     = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange'], refbuild=Variants[v_id]['ref_build'] )
+                            db_liftover_str = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange_liftover'], refbuild=Variants[v_id]['ref_build_liftover'] )
+                            if args.variation_type == 'maf':
+                                altmatch_output_lines.append( [ s.split('||')[0], s.split('||')[1], called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
+
+                            elif args.variation_type == 'fusion':
+                                altmatch_output_lines.append( [ s,                                  called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
+                            else:
+                                pass
+
+            # use pandas to prepare output
+            if args.variation_type == 'maf':
+                df = pd.DataFrame( altmatch_output_lines, columns = header_maf_list )
+            elif args.variation_type == 'fusion':
+                df = pd.DataFrame( altmatch_output_lines, columns = header_fusion_list )
+            else:
+                abort_run('unknown variant mode/filetype for printing')
+            df = condense_altmatch_output( df, args.variation_type )
+            df.to_csv( args.output_file, sep = '\t', header=True, index=False)
 
         # output the matches to trials
         if len(args.annotate_trials):

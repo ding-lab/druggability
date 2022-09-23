@@ -155,6 +155,8 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
             known_variants = uniquify(  known_variants )
 
         # Set up storage for tracking matches
+        check_alloc_named( Matches, sample_pair, 'match_level' )
+
         if sample_pair not in Variant_tracking.keys():
             Variant_tracking[ sample_pair ] = dict()
         Variant_tracking[ sample_pair ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
@@ -170,7 +172,6 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
             for v_id in Genes[gene]:
 
                 if has_genomic_match( gdnachange, v_id, Variants, 'gdnachange_liftover' ):
-                    check_alloc_named( Matches, sample_pair, 'match_level' )
                     called_str = '{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
                     list_append( Matches[ sample_pair ]['full'], {'v_id': v_id, 'reason': '1.gcoordExact_altExact', 'called': called_str} )
                     Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
@@ -178,7 +179,6 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
                     continue
 
                 if has_genomic_match( gdnacoords, v_id, Variants, 'gdnacoords_liftover' ):
-                    check_alloc_named( Matches, sample_pair, 'match_level' )
                     called_str = '{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
                     list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': '2.gcoordExact_altDiff', 'called': called_str} )
                     Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
@@ -186,7 +186,6 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
                     continue
 
                 if has_genomic_overlap( tmp_set, v_id, Variants ):
-                    check_alloc_named( Matches, sample_pair, 'match_level' )
                     called_str = '{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
                     list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': '3.gcoordOverlap', 'called': called_str} )
                     Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
@@ -196,7 +195,6 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
                 if Variants[v_id]['main_variant_class'] == MUTATION:
                     if Variants[v_id]['prot_ref_start_pos'] > 0:
                         if get_aachange_overlap_length( aachange, v_id, Variants ) > 0:
-                            check_alloc_named( Matches, sample_pair, 'match_level' )
                             called_str = '{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
                             list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': '4.pcoordOverlap', 'called': called_str} )
                             Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
