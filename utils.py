@@ -102,7 +102,7 @@ header_by_sample_list = [ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_
 header_aux_list       = [ 'Sample', 'Disease', 'Variant_class', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status']
 
 def print_header( var_mode ):
-    if var_mode == 'maf':
+    if var_mode in ['maf','basicmaf']:
         print( '\t'.join(header_maf_list) )
     elif var_mode == 'fusion':
         print( '\t'.join(header_fusion_list) )
@@ -125,7 +125,7 @@ def condense_altmatch_output( df, var_mode ):
     df = df.drop_duplicates()
 
     # group citations
-    if var_mode == 'maf':
+    if var_mode in ['maf','basicmaf']:
         header_orig    = header_maf_list.copy()
         header_groupby = header_maf_list.copy()
     elif var_mode == 'fusion':
@@ -334,6 +334,10 @@ def map_mut_reverse( s ):
     the_map = {MUTATION: 'mutation', INSERTION: 'insertion', DELETION: 'deletion', FUSION: 'fusion', WILDTYPE: 'wildtype'}
     return the_map[s]
 
+def map_maf_reverse( s ):
+    the_map = {WASHU_MAF: 'WASHU_MAF', UNION_MAF: 'UNION_MAF', BASIC_MAF: 'BASIC_MAF'}
+    return the_map[s]
+
 def list_disqualified_trials( disquals ):
     mylist = []
     for i in disquals:
@@ -370,7 +374,7 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
                             match_idx += 1
                             db_orig_str     = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange'], refbuild=Variants[v_id]['ref_build'] )
                             db_liftover_str = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange_liftover'], refbuild=Variants[v_id]['ref_build_liftover'] )
-                            if args.variation_type == 'maf':
+                            if args.variation_type in ['maf','basicmaf']:
                                 altmatch_output_lines.append( [ s.split('||')[0], s.split('||')[1], called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
 
                             elif args.variation_type == 'fusion':
@@ -379,7 +383,7 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
                                 pass
 
             # use pandas to prepare output
-            if args.variation_type == 'maf':
+            if args.variation_type in ['maf','basicmaf']:
                 df = pd.DataFrame( altmatch_output_lines, columns = header_maf_list )
             elif args.variation_type == 'fusion':
                 df = pd.DataFrame( altmatch_output_lines, columns = header_fusion_list )

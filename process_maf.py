@@ -17,6 +17,52 @@ logger.setLevel(0)
 csv.field_size_limit( 131072 * 82 )
 
 
+# Block to determine input format
+def is_maf_header_1( fields ):   # washu
+     if ['Chromosome', 'Start_Position', 'End_Position', 'Variant_Type', 'Tumor_Sample_Barcode', 'Matched_Norm_Sample_Barcode', 'HGVSp_Short'] == [ fields[x] for x in [4,5,6,9,15,16,36] ]:
+         return True
+     else:
+         return False
+
+def is_maf_header_2( fields ):   # union
+    if ['Chromosome', 'Start_Position', 'End_Position', 'Variant_Type', 'Tumor_Sample_Barcode', 'Matched_Norm_Sample_Barcode', 'Protein_Change'] == [ fields[x] for x in [3,4,5,8,12,13,26] ]:
+        return True
+    else:
+        return False
+
+def is_maf_header_3( fields ):   # basic
+    if ['Chromosome', 'Start_Position', 'End_Position', 'Variant_Type', 'Tumor_Sample_Barcode', 'Matched_Norm_Sample_Barcode', ] == [ fields[x] for x in [2,3,4,6,9,10] ] and fields[12] in ['Protein_Change', 'HGVSp_Short', 'HGVSp']:
+        return True
+    else:
+        return False
+
+def get_maf_type( fields ):
+    NF = len(fields)
+    if NF < 13:
+        abort_run('Unrecognized maf format')
+    elif NF < 27:
+        if is_maf_header_3( fields ):
+            return BASIC_MAF
+        else:
+            abort_run('Unrecognized maf format')
+    elif NF < 37:
+        if is_maf_header_2( fields ):
+            return UNION_MAF
+        elif is_maf_header_3( fields ):
+            return BASIC_MAF
+        else:
+            abort_run('Unrecognized maf format')
+    else:
+        if is_maf_header_1( fields ):
+            return WASHU_MAF
+        elif is_maf_header_2( fields ):
+            return UNION_MAF
+        elif is_maf_header_3( fields ):
+            return BASIC_MAF
+        else:
+            abort_run('Unrecognized maf format')
+
+
 # Process somatic mafs
 def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, call_mode ):
     inputFile        = args.variant_file
@@ -48,19 +94,11 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
         fields = [ s.strip() for s in row ]
 
         if bReadHeader:
-            if row[0] != 'Hugo_Symbol':
-                continue
-            if ['Chromosome', 'Start_Position', 'End_Position', 'Variant_Type', 'Tumor_Sample_Barcode', 'Matched_Norm_Sample_Barcode', 'HGVSp_Short'] == [ fields[x] for x in [4,5,6,9,15,16,36] ]:
-                maf_filetype = WASHU_MAF
+            if row[0] == 'Hugo_Symbol':
+                maf_filetype = get_maf_type( fields )
+                logger.info( 'maf format recognized: {}'.format(map_maf_reverse(maf_filetype)) )
                 bReadHeader = False
-                continue
-            elif ['Chromosome', 'Start_Position', 'End_Position', 'Variant_Type', 'Tumor_Sample_Barcode', 'Matched_Norm_Sample_Barcode', 'Protein_Change'] == [ fields[x] for x in [3,4,5,8,12,13,26] ]:
-                maf_filetype = UNION_MAF
-                bReadHeader = False
-                continue
-            else:
-                abort_run('Unrecognized maf format')
-
+            continue
 
         if maf_filetype == WASHU_MAF:
             gene         = fields[ 0]
@@ -106,6 +144,22 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
             sample_n     = fields[13]   # here, this is (matched) normal sample
             cdnachange   = fields[24]
             aachange     = fields[26]
+
+        if maf_filetype == BASIC_MAF:
+            gene         = fields[ 0]
+            ref_build    = fields[ 1]
+            chrom        = fields[ 2].replace('chr','')
+            pos_start    = fields[ 3]
+            pos_end      = fields[ 4]
+            maf_varclass = fields[ 5]
+            vartype      = fields[ 6]   # [SDOTM]NP, INS, DEL
+            ref          = fields[ 7]
+            alt          = fields[ 8]
+            sample_t     = fields[ 9]   # might be same as case id
+            sample_n     = fields[10]   # might be same as case id
+            cdnachange   = fields[11]
+            aachange     = fields[12]
+
 
         # Require samples to match
         if (sample_t != args.tumor_name)  or  (sample_n != args.normal_name):

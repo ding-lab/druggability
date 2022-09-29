@@ -45,7 +45,7 @@ def main( args ):
         load_trials( Trials, args.annotate_trials, Gene_sets )
 
     # call main processing
-    if args.variation_type == 'maf':    # somatic maf
+    if args.variation_type in ['maf', 'basicmaf']:    # somatic maf
         process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, 'somatic' )
 
     if args.variation_type == 'fusion':   # somatic fusions
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     parser.add_argument('-at', type=str, dest='annotate_trials', required=False, help='report clinical trials for this disease keyword', default='')
     parser.add_argument('-ato', dest='trials_auxiliary_output_file', type=str, required=False, help='clinical trials auxiliary output filename', default='trials.aux')
     requiredNamed = parser.add_argument_group('required arguments')
-    requiredNamed.add_argument('-t', dest='variation_type', type=str, required=True, help='variation type:  maf | fusion')
+    requiredNamed.add_argument('-t', dest='variation_type', type=str, required=True, help='variation type:  maf | fusion | basicmaf')
     requiredNamed.add_argument('-f', dest='variant_file', type=str, required=True, help='variant filename')
     requiredNamed.add_argument('-tn', dest='tumor_name', type=str, required=True, help='sample or tumor sample name')
     args = parser.parse_args()
@@ -97,10 +97,10 @@ if __name__ == '__main__':
     logging.basicConfig( filename = mylogfile, level=0)
 
     # Validate input
-    if args.variation_type not in ['maf', 'fusion']:
+    if args.variation_type not in ['maf', 'fusion', 'basicmaf']:
         abort_run('invalid input variation type')
 
-    if args.variation_type == 'maf':
+    if args.variation_type in ['maf', 'basicmaf']:
         if args.normal_name == '':
             abort_run('normal sample name is missing for maf input')
 
@@ -113,9 +113,6 @@ if __name__ == '__main__':
         if args.annotate_trials not in [ w.lower() for w in config.trials_files.keys()]:
             list_trials()
             abort_run('keyword ' + args.annotate_trials + ' does not have clinical trials annotations')
-
-
-
 
 
     # Record run configuration
@@ -134,7 +131,7 @@ if __name__ == '__main__':
     logger.info('debug flag count={}'.format( args.debug ))
     logger.info('variant file={}'.format( args.variant_file ))
     logger.info('variation type={}'.format( args.variation_type ))
-    if args.variation_type == 'maf':
+    if args.variation_type in ['maf','basicmaf']:
         logger.info('tumor sample name={}'.format( args.tumor_name ))
         logger.info('normal sample name={}'.format( args.normal_name ))
     elif args.variation_type == 'fusion':
