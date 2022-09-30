@@ -159,13 +159,19 @@ def condense_trials_output( df ):
         base_genes = dict()
         if len(genelist) > 1:
             for g in genelist:
-                m = re.match(r'(.*)(\d+)', g)
-                if m is None:  #  no numerical suffix
-                    check_alloc_named( base_genes, g, 'list' )
-                    base_genes[ g ].append( '' )
-                else:          # numerical suffix
+                m = re.match(r'([A-Za-z]+)(\d+)?([A-Z]+)?([0-9]+)?', g)
+                if m[2] is None:
+                    check_alloc_named( base_genes, m[0], 'list' )
+                    base_genes[ m[0] ].append( '' )
+                elif m[3] is None:
                     check_alloc_named( base_genes, m[1], 'list' )
                     base_genes[ m[1] ].append( m[2] )
+                elif m[4] is None:
+                    check_alloc_named( base_genes, m[1]+m[2], 'list' )
+                    base_genes[ m[1]+m[2] ].append( m[3] )    # resolve e.g. CA/CB later
+                else:
+                    check_alloc_named( base_genes, m[1]+m[2]+m[3], 'list' )
+                    base_genes[ m[1]+m[2]+m[3] ].append( m[4] )
         else:
             check_alloc_named( base_genes, genelist[0], 'list' )
             base_genes[ genelist[0] ] = ''
