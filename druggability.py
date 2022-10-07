@@ -122,8 +122,8 @@ if __name__ == '__main__':
     # Check version
     major,minor,micro = sys.version_info[0:3]
     logger.info('Python {}.{}.{} detected' . format(major,minor,micro))
-    if (major != 3):
-        abort_run('Python verion 3 is required')
+    if (major < 3) or (major==3 and minor < 7) or (major==3 and minor==7 and micro < 6):
+        abort_run('Python version 3.7.6 or higher is required')
 
     logger.info('command={}'.format( ' '.join( sys.argv )))
     logger.info('output file={}'.format( args.output_file ))
