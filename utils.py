@@ -141,17 +141,21 @@ def condense_altmatch_output( df, var_mode ):
     df = df.sort_values( by=['Criteria_Met','Called'] )
     return df
 
+def collapse_field( df, field ):
+    header_aux_list_groupby = header_aux_list.copy()
+    header_aux_list_groupby.remove( field )
+    df = df.sort_values( by=[ field ] )
+    df = df.groupby( header_aux_list_groupby )[field].apply(','.join).reset_index()
+    df = df.reindex( columns = header_aux_list )
+    return df
 
 def condense_trials_output( df ):
     # remove copies
     df = df.drop_duplicates()
 
-    # group genes
-    header_aux_list_groupby = header_aux_list.copy()
-    header_aux_list_groupby.remove('Gene')
-    df = df.sort_values( by=['Gene'] )
-    df = df.groupby( header_aux_list_groupby )['Gene'].apply(','.join).reset_index()
-    df = df.reindex( columns = header_aux_list )
+    # group genes, variant classes
+    df = collapse_field( df, 'Gene' )
+    df = collapse_field( df, 'Variant_class' )
 
     # combine genes in same family
     for idx, row in df.iterrows():
