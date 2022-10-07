@@ -12,7 +12,7 @@ from annotate_trials import *
 logger = logging.getLogger(__name__)
 logger.setLevel(0)
 
-def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Trials, Matches_trials, call_mode ):
+def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Trials, Matches_trials, call_context ):
     inputFile         = args.variant_file
     Variant_tracking  = dict()   # record variants by sample
     fusion_filetype   = UNDECLARED
@@ -123,9 +123,9 @@ def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Tr
         for vc in VARIANT_CLASSES:
             check_alloc_named( Matches_trials[ Sample ], vc, 'dict' )
 
-        evaluate_trials_fusion( Trials, Genes_altered, Sample, Matches_trials, call_mode )
-        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, call_mode )
+        evaluate_trials_fusion( Trials, Genes_altered, Sample, Matches_trials, call_context )
+        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, call_context )
         fusion_seen = ','.join(sorted(Matches_trials[ Sample ][ FUSION   ].keys()))
         wt_seen     = ','.join(sorted(Matches_trials[ Sample ][ WILDTYPE ].keys()))
-        logger.info('Altered genes having FUSIONS allowed by trials:' + (fusion_seen if len(fusion_seen) else 'n/a'))
-        logger.info('Non-altered genes allowed by trials:'            + (wt_seen     if len(wt_seen)     else 'n/a'))
+        logger.info('Altered genes with FUSIONS evaluated for trials matching in {} context: ' . format(call_context) + (fusion_seen if len(fusion_seen) else 'n/a'))
+        logger.info('Unaltered genes evaluated for trial matching in {} context: ' . format(call_context) + (wt_seen if len(wt_seen) else 'n/a'))

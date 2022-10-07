@@ -497,7 +497,7 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
 
         study                     = fields[ 0]    # study id
         b_involves_genomics       = fields[ 3]    # yes/no: if yes, load the information
-        call_mode                 = fields[ 5]    # germline or somatic
+        call_context              = fields[ 5]    # germline or somatic
         genes_str                 = fields[ 6]    # list of genes
         alteration_str            = fields[ 7]    # alteration types (i.e., one of our variant classes)
         position_str              = fields[ 8]    # list of loci/alterations
@@ -534,26 +534,28 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
                 for alteration_type in clean_split( alteration_str ):
                     if alteration_type == "none":  # indicates wild type
                         pos = 'none'
-                        check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ], pos, 'list' )
+                        check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ], call_context, 'dict' )
+                        check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ][ call_context ], pos, 'list' )
                         eligibility_type = DISQUALIFYING if re.search(':disqualifying:', position_str) else QUALIFYING
-                        Trials[ gene ][ map_mut(alteration_type) ][ pos ].append( {'trial_id': study,
+                        Trials[ gene ][ map_mut(alteration_type) ][ call_context ][ pos ].append( {'trial_id': study,
                                                                                    'intervention': intervention,
                                                                                    'overall_status': overall_status,
                                                                                    'position_target': '-',
                                                                                    'eligibility_type': eligibility_type,
-                                                                                   'call_mode': call_mode,
+                                                                                   'call_context': call_context,
                                                                                    })
                     else:
                         if not len( position_str ):
                             abort_run('in trials input file: the position target is missing for trial={trial}' . format( trial=study ))
                         for pos in clean_split( position_str ):
-                            check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ], pos, 'list' )
+                            check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ], call_context, 'dict' )
+                            check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ][ call_context ], pos, 'list' )
                             eligibility_type = DISQUALIFYING if re.search(':disqualifying:', pos) else QUALIFYING
-                            Trials[ gene ][ map_mut(alteration_type) ][ pos ].append( {'trial_id': study,
+                            Trials[ gene ][ map_mut(alteration_type) ][ call_context ][ pos ].append( {'trial_id': study,
                                                                                        'intervention': intervention,
                                                                                        'overall_status': overall_status,
                                                                                        'position_target': pos.replace(':disqualifying:',''),
                                                                                        'eligibility_type': eligibility_type,
-                                                                                       'call_mode': call_mode,
+                                                                                       'call_context': call_context,
                                                                                        })
     logger.info('Read {} lines from clinical trials data'.format( read_cnt ))
