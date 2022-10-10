@@ -34,34 +34,11 @@ def harmonize_maf_2( myvar, gene, Fasta ):
     '''
     Additional round of reformatting due to non-HGVS convention.
     In particular, position ranges do not include the single-letter amino acids.
-    We can fix 'delins' variants, which come denoted  as '>', and some insertions we've seen include *{aa} and **.
+    We can fix 'delins' variants, which come denoted  as '>'
     '''
-    if re.search(r'>', myvar):
-        a = myvar.split('>')
-        if len(a) != 2:
-            logger.warning('Unexpected input format of delins variant from union maf. Leaving unharmonized as %s' % ( myvar ))
-            return myvar
-        ins_aa = a[1]
-
-        b = a[0].split('_')
-        if len(b) != 2:
-            logger.warning('No range reported in delins variant from union maf. Leaving unharmonized as %s' % ( myvar ))
-            return myvar
-        start_pos  = int(b[0])
-        c          = re.search(r'^(\d+)([A-Y]{2,})$', b[1])
-        end_pos    = int(c[1])
-        ref_aa_str = c[2]
-        start_aa   = ref_aa_str[ 0]
-        end_aa     = ref_aa_str[-1]
-
-        new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'delins' + ins_aa
-
-        logger.info('Reformatted %s -> %s in union maf' % ( myvar, new_myvar ))
-        return new_myvar
 
     if re.search(r'del$', myvar):
-        a = myvar[ 0 : len(myvar) - 3 ]
-        b = re.search(r'([A-Y]+)([0-9]+)', a)
+        b = re.search(r'(\D+)([0-9]+)del$', myvar)
         if b is None:
             logger.warning('Unable to parse del variant from union maf. Leaving unharmonized as %s' % (myvar))
             return myvar
@@ -74,9 +51,34 @@ def harmonize_maf_2( myvar, gene, Fasta ):
             end_pos   = start_pos + len(b[1]) - 1
             new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'del'
 
-
         logger.info('Reformatted %s -> %s in union maf' % ( myvar, new_myvar ))
         return new_myvar
+
+    if re.search(r'>', myvar):
+        a = myvar.split('>')
+        if len(a) != 2:
+            logger.warning('Unexpected input format of delins variant from union maf. Leaving unharmonized as %s' % ( myvar ))
+            return myvar
+        ins_aa = a[1]
+
+        if not re.search( '_', a[0]):
+            logger.warning('No range reported in delins variant from union maf. Leaving unharmonized as %s' % ( myvar ))
+            return myvar
+
+        b = re.search(r'(\d+)_(\d+)(\D*)', a[0])
+        start_pos  = int(b[1])
+        end_pos    = int(b[2])
+        ref_aa_str = b[3]
+        start_aa   = ref_aa_str[ 0]
+        end_aa     = ref_aa_str[-1]
+
+        if not len(ref_aa_str):
+            logger.warning('Reference allele unspecified in delins variant %s. Leaving unharmonized' % (myvar))
+            return myvar
+        else:
+            new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'delins' + ins_aa
+            logger.info('Reformatted %s -> %s in union maf' % ( myvar, new_myvar ))
+            return new_myvar
 
     if re.search(r'ins', myvar):
         b = re.search(r'^(\d+)(_)(\d+)(ins)(\D*)$', myvar)
@@ -94,9 +96,18 @@ def harmonize_maf_2( myvar, gene, Fasta ):
         if gene not in Fasta.keys():
             logger.warning('Unable to reformat variant %s in union maf: gene %s does not exist among fasta sequences' % (myvar, gene))
             return myvar
-        start_aa  = Fasta[gene]['fasta'][ start_pos - 1 ]
-        end_aa    = Fasta[gene]['fasta'][ end_pos   - 1 ]
-        new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'ins' + ins_seq
+        try:
+            start_aa  = Fasta[gene]['fasta'][ start_pos - 1 ]
+        except:
+            logger.warning('Fasta start position lookup failed: gene={}, position={}. Gene length is {}. Leaving unharmonized'.format( gene, start_pos - 1, len(Fasta[gene]['fasta']) ))
+            return myvar
 
+        try:
+            end_aa    = Fasta[gene]['fasta'][ end_pos   - 1 ]
+        except:
+            logger.warning('Fasta end position lookup failed: gene={}, position={}. Gene length is {}. Leaving unharmonized'.format( gene, end_pos - 1, len(Fasta[gene]['fasta']) ))
+            return myvar
+
+        new_myvar = start_aa + str(start_pos) + '_' + end_aa + str(end_pos) + 'ins' + ins_seq
         logger.info('Reformatted %s -> %s in union maf' % ( myvar, new_myvar ))
         return new_myvar
