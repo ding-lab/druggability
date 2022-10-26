@@ -496,18 +496,18 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
             continue
 
         study                     = fields[ 0]    # study id
-        b_involves_genomics       = fields[ 3]    # yes/no: if yes, load the information
-        call_context              = fields[ 5]    # germline or somatic
-        genes_str                 = fields[ 6]    # list of genes
-        alteration_str            = fields[ 7]    # alteration types (i.e., one of our variant classes)
-        position_str              = fields[ 8]    # list of loci/alterations
-        b_has_addl_requirement    = fields[ 9]
-        genes_additional_str      = fields[10]
-        alteration_additional_str = fields[11]
-        position_additional_str   = fields[12]
-        exclusions_str            = fields[13]
-        intervention              = fields[14]
-        overall_status            = fields[15]
+        b_involves_genomics       = fields[ 1]    # yes/no: if yes, load the information
+        call_context              = fields[ 3]    # germline or somatic
+        genes_str                 = fields[ 4]    # list of genes
+        alteration_str            = fields[ 5]    # alteration types (i.e., one of our variant classes)
+        position_str              = fields[ 6]    # list of loci/alterations
+        b_has_addl_requirement    = fields[ 7]
+        genes_additional_str      = fields[ 8]
+        alteration_additional_str = fields[ 9]
+        position_additional_str   = fields[10]
+        exclusions_str            = fields[11]
+        intervention              = fields[12]
+        overall_status            = fields[13]
 
         # skip blanks
         if not len(study):

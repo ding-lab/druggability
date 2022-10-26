@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
     if len(args.annotate_trials):
         logger.info('clincal trials disease search={}'.format( args.annotate_trials ))
-        logger.info('clincal trials parent accession={}'.format( config.trials_params['date_accessed'] ))
+        logger.info('clincal trials file version={}'.format( config.trials_files[ args.annotate_trials ]['version'] ))
 
     # Run
     log_timestamp('start time')
