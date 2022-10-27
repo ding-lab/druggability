@@ -5,6 +5,8 @@ ENV PATH="/root/miniconda3/bin:${PATH}"
 ARG PATH="/root/miniconda3/bin:${PATH}"
 
 RUN  apt-get update  &&  apt-get install -y --no-install-recommends \
+  ca-certificates \
+  git \
   wget \
   && rm -rf /var/lib/apt/lists/*
 
@@ -17,5 +19,5 @@ RUN activate
 
 RUN pip install pandas==1.0.5
 
-COPY  *.py /usr/local/
-COPY  druggability_databases  /usr/local/druggability_databases
+WORKDIR /usr/local
+RUN git clone --recurse-submodules https://github.com/ding-lab/druggability.git

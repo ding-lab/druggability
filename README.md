@@ -8,18 +8,19 @@
 
 ## Installation
 #### Local installation
-1. A software environment such as `conda` or **[miniconda](https://docs.conda.io/en/latest/miniconda.html)** is highly recommended if it is not otherwise provided for.
-2. Get the repositories. Using SSH URL method,
-	- `git clone git@github.com:ding-lab/druggability.git `
-	- `cd druggability`
-	- `git clone git@github.com:ding-lab/druggability_databases.git`
-	
-	In theory, a single `git clone --recurse-submodules ...` command should work once the repos become public.
-3. If appropriate, activate the conda/miniconda environment and install additional packages: `pip install -r requirements.txt`.
-4. Obtain our clinical trials database. As these files are being updated and tested continually, they are not being distributed externally at this time; please contact the author for availability status.  In the [druggability_databases](https://github.com/ding-lab/druggability_databases/) repository, edit `config.py` with the correct paths.
+1. A software environment such as `conda` or **[miniconda](https://docs.conda.io/en/latest/miniconda.html)** is highly recommended.
+2. Get the repositories:
+
+   `git clone --recurse-submodules https://github.com/ding-lab/druggability.git`
+
+   Running this command creates the main `druggability` directory and the subdirectory `druggability_databases` with the database files. (It is possible to clone the repos separately; just be sure to update `DRUGDBDIR` in `myglobal.py`.)
+
+3. If relevant, activate the conda/miniconda environment and install additional packages: `pip install -r requirements.txt`.
 
 #### Docker environment
+1. Obtain the `Dockerfile` by direct download or from a "git clone" of the `druggability` repo and then build the image, e.g.,
 
+   `docker build -t  druggability .`
 
 
 ## Running
