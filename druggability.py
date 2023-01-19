@@ -6,6 +6,7 @@ import os, sys, csv, re
 import getopt
 import argparse
 import logging
+import pprint
 
 import myglobal
 from load_databases import *
@@ -43,6 +44,11 @@ def main( args ):
     if len(args.annotate_trials):
         load_gene_sets( Gene_sets )
         load_trials( Trials, args.annotate_trials, Gene_sets )
+        if args.b_dump_trials_only:
+            output_s = pprint.pformat( Trials, indent=1, width=100, sort_dicts=True)
+            with open('trials.dump', 'w') as ff:
+                ff.write( output_s )
+            sys.exit(0)
 
     # call main processing
     if args.variation_type in ['maf', 'basicmaf']:    # somatic maf
@@ -78,6 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('-nn', dest='normal_name', type=str, required=False, help='normal sample name', default='')
     parser.add_argument('-at', type=str, dest='annotate_trials', required=False, help='report clinical trials for this disease keyword', default='')
     parser.add_argument('-ato', dest='trials_auxiliary_output_file', type=str, required=False, help='clinical trials auxiliary output filename', default='trials.aux')
+    parser.add_argument('--dump_trials_only', dest='b_dump_trials_only', action='store_true')
     requiredNamed = parser.add_argument_group('required arguments')
     requiredNamed.add_argument('-t', dest='variation_type', type=str, required=True, help='variation type:  maf | fusion | basicmaf')
     requiredNamed.add_argument('-f', dest='variant_file', type=str, required=True, help='variant filename')
@@ -144,6 +151,7 @@ if __name__ == '__main__':
     if len(args.annotate_trials):
         logger.info('clincal trials disease search={}'.format( args.annotate_trials ))
         logger.info('clincal trials file version={}'.format( config.trials_files[ args.annotate_trials ]['version'] ))
+        logger.info('Dump trials only={}'.format( args.b_dump_trials_only ))
 
     # Run
     log_timestamp('start time')
