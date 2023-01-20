@@ -150,7 +150,7 @@ if __name__ == '__main__':
 
     if len(args.annotate_trials):
         logger.info('clincal trials disease search={}'.format( args.annotate_trials ))
-        logger.info('clincal trials file version={}'.format( config.trials_files[ args.annotate_trials ]['version'] ))
+        logger.info('clincal trials access date={}'.format( config.trials_files[ args.annotate_trials ]['accessed'] ))
         logger.info('Dump trials only={}'.format( args.b_dump_trials_only ))
 
     # Run
