@@ -524,6 +524,8 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
             m = re.search(':(.*):', genes_str)
             if m is not None:
                 gene_list_name = m[0].replace(':','')
+                if gene_list_name not in Gene_sets:
+                    abort_run( gene_list_name +  ' is not a recognized gene set. Exiting...')
                 this_gene_list = Gene_sets[ gene_list_name ]
             else:
                 this_gene_list = clean_split( genes_str )
