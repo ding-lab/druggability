@@ -508,6 +508,8 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
         exclusions_str            = fields[11]
         intervention              = fields[12]
         overall_status            = fields[13]
+        phase                     = fields[14]
+        completion_date           = fields[15]
 
         # skip blanks
         if not len(study):
@@ -542,6 +544,8 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
                         Trials[ gene ][ map_mut(alteration_type) ][ call_context ][ pos ].append( {'trial_id': study,
                                                                                    'intervention': intervention,
                                                                                    'overall_status': overall_status,
+                                                                                   'phase': phase,
+                                                                                   'completion_date': completion_date,
                                                                                    'position_target': '-',
                                                                                    'eligibility_type': eligibility_type,
                                                                                    'call_context': call_context,
@@ -556,6 +560,8 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
                             Trials[ gene ][ map_mut(alteration_type) ][ call_context ][ pos ].append( {'trial_id': study,
                                                                                        'intervention': intervention,
                                                                                        'overall_status': overall_status,
+                                                                                       'phase': phase,
+                                                                                       'completion_date': completion_date,
                                                                                        'position_target': pos.replace(':disqualifying:',''),
                                                                                        'eligibility_type': eligibility_type,
                                                                                        'call_context': call_context,

@@ -99,7 +99,7 @@ header_fusion_list    = [ 'Sample',                        'Called',  'DB_Origin
                           'Evidence_Level', 'Clinical_Significance',  'Citation']
 header_by_sample_list = [ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
                           'Evidence_Level', 'Clinical_Significance',  'Citation']
-header_aux_list       = [ 'Sample', 'Disease', 'Variant_class', 'Call_context', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status']
+header_aux_list       = [ 'Sample', 'Disease', 'Variant_class', 'Call_context', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status', 'Phase', 'Completion_date']
 
 def print_header( var_mode ):
     if var_mode in ['maf','basicmaf']:
@@ -414,7 +414,7 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
                     for gene in Matches_trials[s][ vt ]:
                         for ct_info in Matches_trials[s][ vt ][ gene ]:
                             if ct_info['trial_id'] not in disqualified_trials_list:
-                                aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse( vt ), ct_info['call_context'], gene, ct_info['position_target'], ct_info['trial_id'], ct_info['intervention'], ct_info['overall_status']])
+                                aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse( vt ), ct_info['call_context'], gene, ct_info['position_target'], ct_info['trial_id'], ct_info['intervention'], ct_info['overall_status'], ct_info['phase'], ct_info['completion_date']])
 
             # use pandas to prepare output
             df = pd.DataFrame( aux_output_lines, columns = header_aux_list )
