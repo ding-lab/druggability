@@ -523,14 +523,17 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
                 abort_run('In trials input, alteration type <any> is not allowed. Please list variant types explicitly. Exiting...')
 
             # Resolve named gene lists
-            m = re.search(':(.*):', genes_str)
-            if m is not None:
-                gene_list_name = m[0].replace(':','')
-                if gene_list_name not in Gene_sets:
-                    abort_run( gene_list_name +  ' is not a recognized gene set. Exiting...')
-                this_gene_list = Gene_sets[ gene_list_name ]
-            else:
-                this_gene_list = clean_split( genes_str )
+            this_gene_list = []
+            for tmp_item in clean_split( genes_str ):
+                m = re.search(':(.*):', tmp_item)   # check for defined list
+                if m is not None:
+                    gene_list_name = m[0].replace(':','')
+                    if gene_list_name not in Gene_sets:
+                        abort_run( gene_list_name +  ' is not a recognized gene set. Exiting...')
+                    this_gene_list.extend( Gene_sets[ gene_list_name ] )
+                else:
+                    this_gene_list.append( tmp_item )
+            this_gene_list = uniquify( this_gene_list )
 
             for gene in this_gene_list:
                 check_alloc_named( Trials, gene, 'trial' )
