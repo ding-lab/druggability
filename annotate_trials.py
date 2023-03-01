@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(0)
 
-# Find trials mentioning gene wild types
+# Find trials mentioning gene wild types that we found as the reference allele
 def evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, call_context ):
     for gene in Trials.keys():
         if gene not in Genes_altered.keys():  # wildtype genes in trials
@@ -19,11 +19,10 @@ def evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, cal
             if call_context in Trials[ gene ][ WILDTYPE ].keys():
                 if pos in Trials[ gene ][ WILDTYPE ][ call_context ].keys():
                     for t in Trials[ gene ][ WILDTYPE ][ call_context ][ pos ]:
-                        if t['call_context'] == call_context:
-                            check_alloc_named( Matches_trials, Sample, 'dict' )
-                            check_alloc_named( Matches_trials[ Sample ], WILDTYPE, 'dict' )
-                            check_alloc_named( Matches_trials[ Sample ][ WILDTYPE ], gene, 'list' )
-                            Matches_trials[ Sample ][ WILDTYPE ][ gene ].append( t )
+                        check_alloc_named( Matches_trials, Sample, 'dict' )
+                        check_alloc_named( Matches_trials[ Sample ], WILDTYPE, 'dict' )
+                        check_alloc_named( Matches_trials[ Sample ][ WILDTYPE ], gene, 'list' )
+                        Matches_trials[ Sample ][ WILDTYPE ][ gene ].append( t )
 
 
 # Find trials mentioning a given gene name
@@ -34,11 +33,10 @@ def evaluate_trials_fusion( Trials, Genes_altered, Sample, Matches_trials, call_
             if call_context in Trials[ gene ][ FUSION ].keys():
                 if pos in Trials[ gene ][ FUSION ][ call_context ].keys():
                     for t in Trials[ gene ][ FUSION ][ call_context ][ pos ]:
-                        if t['call_context'] == call_context:
-                            check_alloc_named( Matches_trials, Sample, 'dict' )
-                            check_alloc_named( Matches_trials[ Sample ], FUSION, 'dict' )
-                            check_alloc_named( Matches_trials[ Sample ][ FUSION ], gene, 'list' )
-                            Matches_trials[ Sample ][ FUSION ][ gene ].append( t )
+                        check_alloc_named( Matches_trials, Sample, 'dict' )
+                        check_alloc_named( Matches_trials[ Sample ], FUSION, 'dict' )
+                        check_alloc_named( Matches_trials[ Sample ][ FUSION ], gene, 'list' )
+                        Matches_trials[ Sample ][ FUSION ][ gene ].append( t )
 
 # Find qualifications among trials
 def evaluate_trials_disqualifications( Matches_trials ):
