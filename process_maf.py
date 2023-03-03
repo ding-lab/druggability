@@ -347,10 +347,12 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
     if len(args.annotate_trials) and bHasSampleMatch:
         Sample = sample_pair
 
-        # Wildtypes
-        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, call_context )
+        # Check for wildtypes for trials
+        wt_seen = []
+        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, call_context, wt_seen )
+        wt_seen = sorted(wt_seen)
 
-        # Clean up gene lists relevant to trials
+        # Create tidy lists of altered genes in maf that are the subject of trials (one for each type, one for combined)
         for var_type in [ MUTATION, INSERTION, DELETION ]:
             GenesSeenInTrials[ var_type ] = uniquify(GenesSeenInTrials[ var_type ])
             GenesSeenInTrials['all_types'].extend( GenesSeenInTrials[ var_type ] )
@@ -360,14 +362,6 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
         ins_seen  =  ','.join(sorted( GenesSeenInTrials[INSERTION] ))
         del_seen  =  ','.join(sorted( GenesSeenInTrials[DELETION]  ))
 
-        # Determine unaltered genes for the current sample
-        wt_genes_trials = []    # list of genes required to be unaltered (in at least one trial)
-        for xgene in Trials.keys():
-            if call_context in Trials[ xgene ][ WILDTYPE ].keys():
-                if len( Trials[ xgene ][ WILDTYPE ][ call_context ].keys() ):
-                    wt_genes_trials.append( xgene )
-
-        wt_seen         = ','.join(sorted( filter(lambda i: i not in GenesSeenInTrials['all_types'], wt_genes_trials) ))
         logger.info('Altered genes evaluated for trial matching in {} context: {}' . format(call_context, all_seen if len(all_seen) else 'n/a'))
         logger.info('Altered genes with MUTATIONS evaluated for trial matching in {} context: {}' . format(call_context, mut_seen if len(mut_seen) else 'n/a'))
         logger.info('Altered genes with INSERTIONS evaluated for trial matching in {} context: {}' . format(call_context, ins_seen if len(ins_seen) else 'n/a'))

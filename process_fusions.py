@@ -24,6 +24,22 @@ def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Tr
 
     tsv_file  = open( inputFile )
     read_tsv  = csv.reader(tsv_file, delimiter='\t')
+
+    # set sample query
+    Sample = args.tumor_name
+
+    # Set up storage
+    GenesSeenInTrials = dict()    #  Track genes present in the maf (by alteration type) that are relevant to trials in given call context
+    for alt_type in [ FUSION ]:
+        GenesSeenInTrials[ alt_type ] = []
+    GenesSeenInTrials['all_types'] = []    # one-off key to store merged list of all genes
+
+    if len(args.annotate_trials):
+        check_alloc_named( Matches_trials, Sample, 'dict')
+        for vc in VARIANT_CLASSES:
+            check_alloc_named( Matches_trials[ Sample ], vc, 'dict' )
+
+    # Main
     for row in read_tsv:
         fields = [ s.strip() for s in row ]
 
@@ -49,10 +65,10 @@ def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Tr
             fields = fields[2:]
 
         # Process entry
-        FusionName, LeftBreakpoint, RightBreakpoint, Sample, JunctionReadCount, SpanningFragCount, FFPM, PROT_FUSION_TYPE = fields[0:8]
+        FusionName, LeftBreakpoint, RightBreakpoint, this_Sample, JunctionReadCount, SpanningFragCount, FFPM, PROT_FUSION_TYPE = fields[0:8]
 
         # Require sample to match
-        if Sample != args.tumor_name:
+        if this_Sample != Sample:    #  args.tumor_name
             continue
         bHasSampleMatch = True
 
@@ -106,6 +122,9 @@ def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Tr
                         Variant_tracking[Sample][alteration_summary]['v_id_list'].append( v_id )
                         Variant_tracking[Sample][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
 
+            # Check for potentially relevant trials
+            # Fusion search is simpler because only a gene-level match is needed; do the search below instead
+
     tsv_file.close()
 
     # Record sample status
@@ -118,14 +137,15 @@ def process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Tr
     if len(args.annotate_trials) and bHasSampleMatch:
         Sample = args.tumor_name
 
-        # Set up storage
-        check_alloc_named( Matches_trials, Sample, 'dict')
-        for vc in VARIANT_CLASSES:
-            check_alloc_named( Matches_trials[ Sample ], vc, 'dict' )
-
         evaluate_trials_fusion( Trials, Genes_altered, Sample, Matches_trials, call_context )
-        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, call_context )
+
+        # Check for wildtypes for trials
+        wt_seen = []
+        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, call_context, wt_seen )
+        wt_seen = sorted(wt_seen)
+
+        # Create tidy lists of altered genes in input that are the subject of trials (one for each type, one for combined)
         fusion_seen = ','.join(sorted(Matches_trials[ Sample ][ FUSION   ].keys()))
-        wt_seen     = ','.join(sorted(Matches_trials[ Sample ][ WILDTYPE ].keys()))
-        logger.info('Altered genes with FUSIONS evaluated for trials matching in {} context: ' . format(call_context) + (fusion_seen if len(fusion_seen) else 'n/a'))
-        logger.info('Unaltered genes evaluated for trial matching in {} context: ' . format(call_context) + (wt_seen if len(wt_seen) else 'n/a'))
+
+        logger.info('Altered genes with FUSIONS evaluated for trials matching in {} context: {}' . format(call_context, fusion_seen if len(fusion_seen) else 'n/a'))
+        logger.info('Unaltered genes evaluated for trial matching in {} context: {}' . format(call_context, wt_seen if len(wt_seen) else 'n/a'))

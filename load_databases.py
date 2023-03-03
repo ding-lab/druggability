@@ -551,7 +551,7 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
                                                                                    'completion_date': completion_date,
                                                                                    'position_target': '-',
                                                                                    'eligibility_type': eligibility_type,
-                                                                                   'call_context': call_context,
+                                                                                   'call_context': call_context,   # note: repeated info for later
                                                                                    })
                     else:
                         if not len( position_str ):
@@ -567,6 +567,6 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
                                                                                        'completion_date': completion_date,
                                                                                        'position_target': pos.replace(':disqualifying:',''),
                                                                                        'eligibility_type': eligibility_type,
-                                                                                       'call_context': call_context,
+                                                                                       'call_context': call_context,  # note: repeated info for later
                                                                                        })
     logger.info('Read {} lines from clinical trials data'.format( read_cnt ))
