@@ -14,10 +14,17 @@ from process_maf import *
 from process_fusions import *
 from utils import abort_run
 import druggability_databases.config as config
+from enums import *
 
 # Update for module location
 myglobal.DBPATH = os.path.join( os.path.dirname( os.path.abspath(__file__)), myglobal.DRUGDBDIR )
 
+
+def log_sample_mentioned( SampleMentioned, key ):
+    if SampleMentioned[ key ]:
+        logger.info('Sample name was mentioned in the {} input file' . format(key))
+    else:
+        logger.info('WARNING: Sample name was NOT mentioned in the {} input file' . format(key))
 
 def main( args ):
     Matches        = dict()   # alteration matches by sample, separated in 'full' and 'partial' match lists
@@ -30,6 +37,8 @@ def main( args ):
     Genes_altered  = dict()   # genes seen in input variant file
     Matches_trials = dict()   # trials matches by sample with breakdown by variant classes; disqualified trials are a one-off key element
     Gene_sets      = dict()   # named gene sets/classes appearing trials
+    GenesSeenInTrials = dict()
+    SampleMentioned = dict()  # record whether sample was seen to QC against passed sample names
 
     # load variant summary from CIViC
     load_civic( Variants, Genes, VariantAliases)
@@ -41,7 +50,7 @@ def main( args ):
     load_fasta( Fasta )
 
     # Load clinical trials
-    if len(args.annotate_trials):
+    if args.annotate_trials:
         load_gene_sets( Gene_sets )
         load_trials( Trials, args.annotate_trials, Gene_sets )
         if args.b_dump_trials_only:
@@ -50,16 +59,41 @@ def main( args ):
                 ff.write( output_s )
             sys.exit(0)
 
-    # call main processing
-    if args.variation_type in ['maf', 'basicmaf']:    # somatic maf
-        process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, 'somatic' )
+    # Set up storage
+    GenesSeenInTrials = dict()    #  Track genes present in the maf (by alteration type) that are relevant to trials in given call context
+    for alt_type in [ MUTATION, INSERTION, DELETION, FUSION ]:
+        GenesSeenInTrials[ alt_type ] = []
+    GenesSeenInTrials['all_types'] = []    # one-off key to store merged list of all genes
 
-    if args.variation_type == 'fusion':   # somatic fusions
-        process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Trials, Matches_trials, 'somatic' )
+    SampleMentioned = {'maf': False, 'fusion': False}
 
-    # Evaluate trial disqualifications
-    if len(args.annotate_trials):
-        evaluate_trials_disqualifications( Matches_trials )
+    if args.annotate_trials:
+        # Use of a key for sample is legacy; use generic name to enable merging of modalities
+        check_alloc_named( Matches_trials, SAMPLENAME, 'dict')
+        for vc in VARIANT_CLASSES:
+            check_alloc_named( Matches_trials[ SAMPLENAME ], vc, 'dict' )
+
+    call_context = ''
+
+    # call main processing with QC of sample names detected
+    if args.variant_maf_file or args.variant_basicmaf_file:    # somatic maf
+        call_context = 'somatic'
+        process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, SampleMentioned, call_context, GenesSeenInTrials )
+        log_sample_mentioned( SampleMentioned, 'maf')
+
+    if args.variant_fusion_file:   # somatic fusions
+        call_context = 'somatic'
+        process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Trials, Matches_trials, SampleMentioned, call_context, GenesSeenInTrials )
+        log_sample_mentioned( SampleMentioned, 'fusion')
+
+    # Process trials
+    if args.annotate_trials:
+        evaluate_gene_trials_hits( args, Trials, Genes_altered, SAMPLENAME, Matches_trials, call_context, GenesSeenInTrials )
+        # Evaluate trial disqualifications
+        Matches_trials[ SAMPLENAME ][ DISQUALIFYING ] = []
+        if 'maf' in SampleMentioned.keys() or 'fusion' in SampleMentioned.keys():
+            evaluate_trials_disqualifications( Matches_trials )
+
 
     # Report results
     print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials )
@@ -81,14 +115,15 @@ if __name__ == '__main__':
     parser.add_argument('-o', dest='output_file', type=str, required=False, help='alteration database matches', default='alterations.out')
     parser.add_argument('-l', dest='log_file', type=str, required=False, help='logfile name', default='druggability.log')
     parser.add_argument('-d', '--debug', action='count', default=0)
-    parser.add_argument('-nn', dest='normal_name', type=str, required=False, help='normal sample name', default='')
+    parser.add_argument('-nn', dest='normal_name', type=str, required=False, help='MAF normal sample name', default='')
+    parser.add_argument('-tn', dest='tumor_name', type=str, required=False, help='MAF tumor sample name', default='')
+    parser.add_argument('-fn', dest='fusion_sample_name', type=str, required=False, help='fusion sample name', default='')
     parser.add_argument('-at', type=str, dest='annotate_trials', required=False, help='report clinical trials for this disease keyword', default='')
     parser.add_argument('-ato', dest='trials_auxiliary_output_file', type=str, required=False, help='clinical trials auxiliary output filename', default='trials.aux')
     parser.add_argument('--dump_trials_only', dest='b_dump_trials_only', action='store_true')
-    requiredNamed = parser.add_argument_group('required arguments')
-    requiredNamed.add_argument('-t', dest='variation_type', type=str, required=True, help='variation type:  maf | fusion | basicmaf')
-    requiredNamed.add_argument('-f', dest='variant_file', type=str, required=True, help='variant filename')
-    requiredNamed.add_argument('-tn', dest='tumor_name', type=str, required=True, help='sample or tumor sample name')
+    parser.add_argument('--maf', dest='variant_maf_file', type=str, required=False, help='variant file in maf format (requirements: tumor and normal names)', default='')
+    parser.add_argument('--basicmaf', dest='variant_basicmaf_file', type=str, required=False, help='variant file in basic maf format (requirements: tumor and normal names)', default='')
+    parser.add_argument('--fusion', dest='variant_fusion_file', type=str, required=False, help='variant file for fusions (requirement: tumor name)', default='')
     args = parser.parse_args()
 
     # Set up debug level
@@ -104,19 +139,19 @@ if __name__ == '__main__':
     logging.basicConfig( filename = mylogfile, level=0)
 
     # Validate input
-    if args.variation_type not in ['maf', 'fusion', 'basicmaf']:
-        abort_run('invalid input variation type')
-
-    if args.variation_type in ['maf', 'basicmaf']:
-        if args.normal_name == '':
-            abort_run('normal sample name is missing for maf input')
-
-    if args.variation_type == 'fusion':
-        if len(args.normal_name):
-            logger.info('normal sample name will be ignored for fusion input')
+    if not len(sys.argv) > 1:
+        parser.print_help()
+    if not ( args.variant_maf_file  or  args.variant_basicmaf_file  or  args.variant_fusion_file ):
+        abort_run('please specify a variant file')
+    if args.variant_maf_file  and  args.variant_basicmaf_file:
+        abort_run('please specify only one maf or basic maf variant file')
+    if (args.variant_maf_file  or  args.variant_basicmaf_file) and not (args.normal_name and args.tumor_name):
+        abort_run('tumor and normal sample names are required for maf-type input')
+    if args.variant_fusion_file and not args.fusion_sample_name:
+        abort_run('please specify fusion sample name')
 
     args.annotate_trials = args.annotate_trials.lower()
-    if len(args.annotate_trials):
+    if args.annotate_trials:
         if args.annotate_trials not in [ w.lower() for w in config.trials_files.keys()]:
             list_trials()
             abort_run('keyword ' + args.annotate_trials + ' does not have clinical trials annotations')
@@ -136,19 +171,23 @@ if __name__ == '__main__':
     logger.info('output file={}'.format( args.output_file ))
     logger.info('log file={}'.format( args.log_file ))
     logger.info('debug flag count={}'.format( args.debug ))
-    logger.info('variant file={}'.format( args.variant_file ))
-    logger.info('variation type={}'.format( args.variation_type ))
-    if args.variation_type in ['maf','basicmaf']:
-        logger.info('tumor sample name={}'.format( args.tumor_name ))
-        logger.info('normal sample name={}'.format( args.normal_name ))
-    elif args.variation_type == 'fusion':
-        logger.info('sample name={}'.format( args.tumor_name ))
-    else:
-        pass
+
+    if args.variant_maf_file:
+        logger.info('variant file={} (maf format)'.format( args.variant_maf_file ))
+        logger.info('MAF tumor sample name={}'.format( args.tumor_name ))
+        logger.info('MAF normal sample name={}'.format( args.normal_name ))
+    if args.variant_basicmaf_file:
+        logger.info('variant file={} (basic maf format)'.format( args.variant_basicmaf_file ))
+        logger.info('MAF tumor sample name={}'.format( args.tumor_name ))
+        logger.info('MAF normal sample name={}'.format( args.normal_name ))
+    if args.variant_fusion_file:
+        logger.info('variant file={} (fusion format)'.format( args.variant_fusion_file ))
+        logger.info('fusion sample name={}'.format( args.fusion_sample_name ))
+
     logger.info('civic upstream version={}'.format( config.civic_params['upstream_version'] ))
     logger.info('civic liftover={}'.format( config.civic_params['ref_build_liftover'] ))
 
-    if len(args.annotate_trials):
+    if args.annotate_trials:
         logger.info('clincal trials disease search={}'.format( args.annotate_trials ))
         logger.info('clincal trials access date={}'.format( config.trials_files[ args.annotate_trials ]['accessed'] ))
         logger.info('Dump trials only={}'.format( args.b_dump_trials_only ))

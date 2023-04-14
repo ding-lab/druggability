@@ -19,5 +19,5 @@ cat $case_pairs_file | while read line ; do
     read tumor_sample normal_sample <<< $(echo "$line" | cut -d$'\t' -f 1,2)
     fileout_stem=$(basename $cohort_maf).${tumor_sample}_${normal_sample}
     echo $fileout_stem
-    $DRUGGABILITY  -t maf  -f  $cohort_maf  -nn ${normal_sample} -tn ${tumor_sample}  -l $OUTDIR/$fileout_stem.log  -o $OUTDIR/$fileout_stem.out   -at chol -ato $OUTDIR/$fileout_stem.aux -d
+    $DRUGGABILITY  --maf  $cohort_maf  -nn ${normal_sample} -tn ${tumor_sample}  -l $OUTDIR/$fileout_stem.log  -o $OUTDIR/$fileout_stem.out   -at chol -ato $OUTDIR/$fileout_stem.aux -d
 done

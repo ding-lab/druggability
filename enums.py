@@ -24,3 +24,4 @@ DISQUALIFYING = 11   # this value needs to be distinct from those in variant cla
 
 # global
 UNDECLARED = 0
+SAMPLENAME = 'Sample'

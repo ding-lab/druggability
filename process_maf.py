@@ -64,30 +64,22 @@ def get_maf_type( fields ):
 
 
 # Process mafs
-def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, call_context ):
-    inputFile        = args.variant_file
-    Variant_tracking = dict()   # record variants by sample
+def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, SampleMentioned, call_context, GenesSeenInTrials ):
+    inputFile        = args.variant_maf_file if args.variant_maf_file else args.variant_basicmaf_file
+    #Variant_tracking = dict()   # record variants by sample
     maf_filetype     = UNDECLARED
 
     bReadHeader      = True
-    bHasSampleMatch   = False
+    #bHasSampleMatch   = False
+    SampleMentioned['maf'] = False
 
     tsv_file = open( inputFile )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
 
     # Set composite key for tracking matches
-    sample_pair = '{tumor}||{normal}'.format( tumor=args.tumor_name, normal=args.normal_name )
+    #sample_pair = '{tumor}||{normal}'.format( tumor=args.tumor_name, normal=args.normal_name )
+    sample_pair = SAMPLENAME
 
-    # Set up storage
-    GenesSeenInTrials = dict()    #  Track genes present in the maf (by alteration type) that are relevant to trials in given call context
-    for alt_type in [ MUTATION, INSERTION, DELETION ]:
-        GenesSeenInTrials[ alt_type ] = []
-    GenesSeenInTrials['all_types'] = []    # one-off key to store merged list of all genes
-
-    if len(args.annotate_trials):
-        check_alloc_named( Matches_trials, sample_pair, 'dict')
-        for vc in VARIANT_CLASSES:
-            check_alloc_named( Matches_trials[ sample_pair ], vc, 'dict' )
 
     # Main
     for row in read_tsv:
@@ -164,7 +156,8 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
         # Require samples to match
         if (sample_t != args.tumor_name)  or  (sample_n != args.normal_name):
             continue
-        bHasSampleMatch = True
+        #bHasSampleMatch = True
+        SampleMentioned['maf'] = True
 
         # Make a list of all genes in the maf
         Genes_altered[ gene ] = 1
@@ -211,10 +204,6 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
         # Set up storage for tracking matches
         check_alloc_named( Matches, sample_pair, 'match_level' )
 
-        if sample_pair not in Variant_tracking.keys():
-            Variant_tracking[ sample_pair ] = dict()
-        Variant_tracking[ sample_pair ][alteration_summary] = dict( total_evidence_count=0, v_id_list=[] )
-
         # Check for matches with alterations database
         if gene in Genes.keys():
 
@@ -226,37 +215,29 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
             for v_id in Genes[gene]:
 
                 if has_genomic_match( gdnachange, v_id, Variants, 'gdnachange_liftover' ):
-                    called_str = '{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
+                    called_str = 'MUT:{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
                     list_append( Matches[ sample_pair ]['full'], {'v_id': v_id, 'reason': '1.gcoordExact_altExact', 'called': called_str} )
-                    Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
-                    Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
                     continue
 
                 if has_genomic_match( gdnacoords, v_id, Variants, 'gdnacoords_liftover' ):
-                    called_str = '{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
+                    called_str = 'MUT:{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
                     list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': '2.gcoordExact_altDiff', 'called': called_str} )
-                    Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
-                    Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
                     continue
 
                 if has_genomic_overlap( tmp_set, v_id, Variants ):
-                    called_str = '{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
+                    called_str = 'MUT:{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
                     list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': '3.gcoordOverlap', 'called': called_str} )
-                    Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
-                    Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
                     continue
 
                 if Variants[v_id]['main_variant_class'] == MUTATION:
                     if Variants[v_id]['prot_ref_start_pos'] > 0:
                         if get_aachange_overlap_length( aachange, v_id, Variants ) > 0:
-                            called_str = '{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
+                            called_str = 'MUT:{gene} {var}|{genomic_change}|{ref}'.format( gene=gene, var=aachange, genomic_change=gdnachange, ref=ref_build )
                             list_append( Matches[ sample_pair ]['partial'], {'v_id': v_id, 'reason': '4.pcoordOverlap', 'called': called_str} )
-                            Variant_tracking[sample_pair][alteration_summary]['v_id_list'].append( v_id )
-                            Variant_tracking[sample_pair][alteration_summary]['total_evidence_count'] += len(Variants[v_id]['evidence_list'])
                             continue
 
         # Check for potentially relevant trials
-        if len(args.annotate_trials) and bHasSampleMatch:
+        if args.annotate_trials:
 
             if re.search(r'[SDOTM]NP', vartype):
                 if gene in Trials.keys():
@@ -337,33 +318,5 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
 
     tsv_file.close()
 
-    # Record sample status
-    if bHasSampleMatch:
-        logger.info('Sample name was mentioned in the input file')
-    else:
-        logger.info('Sample name was NOT mentioned in the input file')
-
-    # Other annotations of trials
-    if len(args.annotate_trials) and bHasSampleMatch:
-        Sample = sample_pair
-
-        # Check for wildtypes for trials
-        wt_seen = []
-        evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, call_context, wt_seen )
-        wt_seen = sorted(wt_seen)
-
-        # Create tidy lists of altered genes in maf that are the subject of trials (one for each type, one for combined)
-        for var_type in [ MUTATION, INSERTION, DELETION ]:
-            GenesSeenInTrials[ var_type ] = uniquify(GenesSeenInTrials[ var_type ])
-            GenesSeenInTrials['all_types'].extend( GenesSeenInTrials[ var_type ] )
-        GenesSeenInTrials['all_types'] = uniquify(GenesSeenInTrials['all_types'])
-        all_seen  =  ','.join(sorted( GenesSeenInTrials['all_types']  ))
-        mut_seen  =  ','.join(sorted( GenesSeenInTrials[MUTATION]  ))
-        ins_seen  =  ','.join(sorted( GenesSeenInTrials[INSERTION] ))
-        del_seen  =  ','.join(sorted( GenesSeenInTrials[DELETION]  ))
-
-        logger.info('Altered genes evaluated for trial matching in {} context: {}' . format(call_context, all_seen if len(all_seen) else 'n/a'))
-        logger.info('Altered genes with MUTATIONS evaluated for trial matching in {} context: {}' . format(call_context, mut_seen if len(mut_seen) else 'n/a'))
-        logger.info('Altered genes with INSERTIONS evaluated for trial matching in {} context: {}' . format(call_context, ins_seen if len(ins_seen) else 'n/a'))
-        logger.info('Altered genes with DELETIONS evaluated for trial matching in {} context: {}' .format(call_context, del_seen if len(del_seen) else 'n/a'))
-        logger.info('Unaltered genes evaluated for trial matching in {} context: {}' . format(call_context, wt_seen  if len(wt_seen ) else 'n/a'))
+    if bReadHeader:
+        abort_run('Variant file {} is missing the header line' . format( inputFile ))

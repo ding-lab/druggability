@@ -58,6 +58,35 @@ def is_pattern_aa_match( aachange, v_id, Variants ):
     else:
         return False
 
+# Decide sample display info
+def get_sample_info_from_call( args, s ):
+    if re.search( r'^MUT:', s ):
+        sample_info = '||'.join([ args.tumor_name, args.normal_name ])
+    elif re.search( r'^FUS:', s ):
+        sample_info = args.fusion_sample_name
+    else:
+        abort_run('cannot determine sample description from call type')
+    return sample_info
+
+# Decide sample display info WILDTYPE, MUTATION, FUSION, INSERTION, DELETION
+def get_sample_info_from_muttype( args, muttype ):
+    if muttype in [ MUTATION, INSERTION, DELETION ]:
+        sample_info = '||'.join([ args.tumor_name, args.normal_name ])
+    elif muttype in [ FUSION ]:
+        sample_info = args.fusion_sample_name
+    elif muttype in [ WILDTYPE ]:
+        if args.tumor_name and args.normal_name and not args.fusion_sample_name:
+            sample_info = '||'.join([ args.tumor_name, args.normal_name ])
+        elif args.fusion_sample_name and not (args.tumor_name or args.normal_name):
+            sample_info = args.fusion_sample_name
+        elif args.tumor_name and args.normal_name and args.fusion_sample_name:
+            sample_info = '||'.join([ args.tumor_name, args.normal_name, args.fusion_sample_name ])
+        else:
+            abort_run('cannot construct sample description from sample names')
+    else:
+        abort_run('cannot determine sample description for trials output')
+    return sample_info
+
 def check_alloc_named( obj, key, s ):
     if key not in obj.keys():
         if s == 'list':
@@ -93,19 +122,15 @@ def print_thick_line():
     print( '#' * 70 )
 
 
-header_maf_list       = [ 'Tumor_Sample', 'Normal_Sample', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
-                          'Evidence_Level', 'Clinical_Significance',  'Citation']
-header_fusion_list    = [ 'Sample',                        'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
+header_merged_list    = [ 'Sample_info', 'Called',  'DB_Original', 'DB_Liftover', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
                           'Evidence_Level', 'Clinical_Significance',  'Citation']
 header_by_sample_list = [ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
                           'Evidence_Level', 'Clinical_Significance',  'Citation']
-header_aux_list       = [ 'Sample', 'Disease', 'Variant_class', 'Call_context', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status', 'Phase', 'Completion_date']
+header_aux_list       = [ 'Sample_info', 'Disease', 'Variant_class', 'Call_context', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status', 'Phase', 'Completion_date']
 
 def print_header( var_mode ):
-    if var_mode in ['maf','basicmaf']:
-        print( '\t'.join(header_maf_list) )
-    elif var_mode == 'fusion':
-        print( '\t'.join(header_fusion_list) )
+    if var_mode in ['merged']:
+        print( '\t'.join(header_merged_list) )
     elif var_mode == 'by_sample':   # currently unused
         print( '\t'.join(header_by_sample_list) )
     else:
@@ -125,12 +150,9 @@ def condense_altmatch_output( df, var_mode ):
     df = df.drop_duplicates()
 
     # group citations
-    if var_mode in ['maf','basicmaf']:
-        header_orig    = header_maf_list.copy()
-        header_groupby = header_maf_list.copy()
-    elif var_mode == 'fusion':
-        header_orig    = header_fusion_list.copy()
-        header_groupby = header_fusion_list.copy()
+    if var_mode in ['merged']:
+        header_orig    = header_merged_list.copy()
+        header_groupby = header_merged_list.copy()
     else:
         abort_run('unknown variant mode/filetype in condense')
     header_groupby.remove('Citation')
@@ -367,7 +389,7 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
             orig_stdout = sys.stdout
             with open( args.output_file, 'w') as f:
                 sys.stdout = f
-                print_header( args.variation_type )
+                print_header( 'merged' if (args.variant_maf_file or args.variant_basicmaf_file or args.variant_fusion_file) else '' )
                 sys.stdout = orig_stdout
                 logger.info('No matches to alteration db found!')
 
@@ -384,28 +406,18 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
                             match_idx += 1
                             db_orig_str     = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange'], refbuild=Variants[v_id]['ref_build'] )
                             db_liftover_str = '{v_id}|{variant}|{gchange}|{refbuild}'.format( v_id=v_id, variant=Variants[v_id]['variant'], gchange=Variants[v_id]['gdnachange_liftover'], refbuild=Variants[v_id]['ref_build_liftover'] )
-                            if args.variation_type in ['maf','basicmaf']:
-                                altmatch_output_lines.append( [ s.split('||')[0], s.split('||')[1], called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
-
-                            elif args.variation_type == 'fusion':
-                                altmatch_output_lines.append( [ s,                                  called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
-                            else:
-                                pass
+                            sample_info     = get_sample_info_from_call( args, called )
+                            altmatch_output_lines.append( [ sample_info, called, db_orig_str, db_liftover_str, matchtype, reason,   v_id.split(':')[0],  t['disease'], t['oncogenicity'], t['mutation_effect'],   t['drugs_list_string'], t['evidence_type'], t['evidence_direction'], config.evidence_level_anno[t['evidence_level']], t['clinical_significance'], format_citations(t['citations'])] )
 
             # use pandas to prepare output
-            if args.variation_type in ['maf','basicmaf']:
-                df = pd.DataFrame( altmatch_output_lines, columns = header_maf_list )
-            elif args.variation_type == 'fusion':
-                df = pd.DataFrame( altmatch_output_lines, columns = header_fusion_list )
-            else:
-                abort_run('unknown variant mode/filetype for printing')
-            df = condense_altmatch_output( df, args.variation_type )
+            df = pd.DataFrame( altmatch_output_lines, columns = header_merged_list )
+            df = condense_altmatch_output( df, 'merged' )
             df.to_csv( args.output_file, sep = '\t', header=True, index=False)
 
         # output the matches to trials
         if len(args.annotate_trials):
             disqualified_trials_list = list_disqualified_trials( Matches_trials[s][DISQUALIFYING] )
-            logger.info('Sample {} had {} clinical trial disqualifying alterations'.format( s, len(Matches_trials[s][ DISQUALIFYING ])))
+            logger.info('Number of clinical trial disqualifying alterations: {}'.format( len(Matches_trials[s][ DISQUALIFYING ])))
             logger.info('Trials disregarded due to disqualifying alterations: {}'.format( 'none' if not disqualified_trials_list else ','.join( disqualified_trials_list ) ))
 
             aux_output_lines = []
@@ -414,7 +426,8 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
                     for gene in Matches_trials[s][ vt ]:
                         for ct_info in Matches_trials[s][ vt ][ gene ]:
                             if ct_info['trial_id'] not in disqualified_trials_list:
-                                aux_output_lines.append([ s, args.annotate_trials, map_mut_reverse( vt ), ct_info['call_context'], gene, ct_info['position_target'], ct_info['trial_id'], ct_info['intervention'], ct_info['overall_status'], ct_info['phase'], ct_info['completion_date']])
+                                sample_info  = get_sample_info_from_muttype( args, vt )
+                                aux_output_lines.append([ sample_info, args.annotate_trials, map_mut_reverse( vt ), ct_info['call_context'], gene, ct_info['position_target'], ct_info['trial_id'], ct_info['intervention'], ct_info['overall_status'], ct_info['phase'], ct_info['completion_date']])
 
             # use pandas to prepare output
             df = pd.DataFrame( aux_output_lines, columns = header_aux_list )

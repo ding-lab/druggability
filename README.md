@@ -26,38 +26,43 @@
 ## Running
 ```
 $ ./druggability.py -h
-usage: druggability.py [-h] [-o OUTPUT_FILE] [-l LOG_FILE] [-d]
-                       [-nn NORMAL_NAME] [-at ANNOTATE_TRIALS]
-                       [-ato TRIALS_AUXILIARY_OUTPUT_FILE] -t VARIATION_TYPE
-                       -f VARIANT_FILE -tn TUMOR_NAME
+usage: druggability.py [-h] [-o OUTPUT_FILE] [-l LOG_FILE] [-d] [-nn NORMAL_NAME]
+                       [-tn TUMOR_NAME] [-fn FUSION_SAMPLE_NAME] [-at ANNOTATE_TRIALS]
+                       [-ato TRIALS_AUXILIARY_OUTPUT_FILE] [--dump_trials_only]
+                       [--maf VARIANT_MAF_FILE] [--basicmaf VARIANT_BASICMAF_FILE]
+                       [--fusion VARIANT_FUSION_FILE]
 
 optional arguments:
-  -h, --help            show this help message and exit
-  -o OUTPUT_FILE        alteration database matches
-  -l LOG_FILE           logfile name
+  -h, --help                         show this help message and exit
+  -o OUTPUT_FILE                     alteration database matches
+  -l LOG_FILE                        logfile name
+  -nn NORMAL_NAME                    MAF normal sample name
+  -tn TUMOR_NAME                     MAF tumor sample name
+  -fn FUSION_SAMPLE_NAME             fusion sample name
+  -at ANNOTATE_TRIALS                report clinical trials for this disease keyword
+  -ato TRIALS_AUXILIARY_OUTPUT_FILE  clinical trials auxiliary output filename
+  --maf VARIANT_MAF_FILE             variant file in maf format (requirements: tumor and normal names)
+  --basicmaf VARIANT_BASICMAF_FILE   variant file in basic maf format (requirements: tumor and normal names)
+  --fusion VARIANT_FUSION_FILE       variant file for fusions (requirement: tumor name)
+  --dump_trials_only
   -d, --debug
-  -nn NORMAL_NAME       normal sample name
-  -at ANNOTATE_TRIALS   report clinical trials for this disease keyword
-  -ato TRIALS_AUXILIARY_OUTPUT_FILE
-                        clinical trials auxiliary output filename
-
-required arguments:
-  -t VARIATION_TYPE     variation type: maf | fusion | basicmaf
-  -f VARIANT_FILE       variant filename
-  -tn TUMOR_NAME        sample or tumor sample name
 ```
 Notes:
-- The code is developed with cohort input files in mind and so it's best run as part of a loop. See the `examples` directory for driver scripts to use as templates.
+- Releases v1.2+:
+   - Maf and fusion files can now be specified at the same time. The sample(s) responsible for the database matches are shown in the output tables.
+   - Each input file type has been given its own command-line flag.
+   - The sample names passed to the tool (`-nn`, `-tn`, `-fn`) need to match those appearing in the inputs. This feature can be helpful for comparing results across aliquots.
+- For fusion inputs, the "fusion sample name" can be any sample, normal or tumor.
+- See the `examples` directory for driver scripts to use as templates, particularly for analyzing a cohort of sample sets.
 - The variant call files that were used in development are not able to be distributed externally.
-- For fusion inputs, the "tumor name" is thought of as any sample, normal or tumor.
 
 ### MAF examples:
 1. **MAFs** in ding-lab or PanCan union maf formats are automatically detected:
     ```
-    $ ./druggability.py  -t maf  -f LUAD.Somatic.050919.mnp.annot.maf -nn C3N-00169_N -tn C3N-00169_T  -l  druggability.log  -o alterations.out
+    $ ./druggability.py  --maf  LUAD.Somatic.050919.mnp.annot.maf -nn C3N-00169_N -tn C3N-00169_T  -l  druggability.log  -o alterations.out
     ```
     ```
-    $ ./druggability.py  -t maf  -f LUAD.Somatic.050919.mnp.annot.maf -nn C3N-00169_N -tn C3N-00169_T  -l druggability.log  -o alterations.out  -at chol  -ato  trials.aux
+    $ ./druggability.py  --maf  LUAD.Somatic.050919.mnp.annot.maf -nn C3N-00169_N -tn C3N-00169_T  -l druggability.log  -o alterations.out  -at chol  -ato  trials.aux
     ```
 
 2. **Ad hoc MAFs**. Variant call files, such as those redistributed with publications, may have a different format than those listed above. In that case, `druggability` can read a tab-delimited file whose first 13 fields are the following:
@@ -68,7 +73,7 @@ Notes:
     and analyzed with the `basicmaf` option:
 
     ```
-    $ ./druggability.py  -t basicmaf  -f cohort.maf -nn 111 -tn 111  -l druggability.log  -o alterations.out  -at chol  -ato  trials.aux
+    $ ./druggability.py  --basicmaf  cohort.maf -nn 111 -tn 111  -l druggability.log  -o alterations.out  -at chol  -ato  trials.aux
     ```
     Notes:
 	- Coordinates are 1-based
@@ -77,5 +82,11 @@ Notes:
 ### Fusion example:
 - Input file must be in ding-lab format.
     ```
-    $ ./druggability.py  -t fusion -f CPTAC_fusions_v0.1.csv.tsv -tn C3L-00165_T  -l druggability.log  -o alterations.out
+    $ ./druggability.py  --fusion  CPTAC_fusions_v0.1.csv.tsv -fn C3L-00165_T  -l druggability.log  -o alterations.out
+    ```
+
+### Joint MAF/Fusion example:
+
+    ```
+    $ ./druggability.py --basicmaf mc3.v0.2.8.PUBLIC.code.filtered.Missense.maf.CHOL --fusion TCGA_MC3.allfusion.compile.txt.CHOL.reformatted.tsv -nn TCGA-3X-AAVA-10A-01D-A41A-09 -tn TCGA-3X-AAVA-01A-11D-A417-09 -fn TCGA-3X-AAVA-01A-11R-A41I-07 -l TCGA_MC3_chol.TCGA-3X-AAVA.log -o TCGA_MC3_chol.TCGA-3X-AAVA.out -at chol -ato TCGA_MC3_chol.TCGA-3X-AAVA.aux
     ```
