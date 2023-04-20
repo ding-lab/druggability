@@ -522,6 +522,8 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
             # QC
             if alteration_str == 'any':
                 abort_run('In trials input, alteration type <any> is not allowed. Please list variant types explicitly. Exiting...')
+            if alteration_str == 'none' and len(position_str):
+                abort_run('In trials input, alteration type <none> cannot also have a position. Exiting...')
 
             # Resolve named gene lists
             this_gene_list = []
@@ -540,11 +542,11 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
                 check_alloc_named( Trials, gene, 'trial' )
 
                 for alteration_type in clean_split( alteration_str ):
-                    if alteration_type == "none":  # indicates wild type
+                    if alteration_type == "none":  # indicates wild type; input position is empty
                         pos = 'none'
                         check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ], call_context, 'dict' )
                         check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ][ call_context ], pos, 'list' )
-                        eligibility_type = DISQUALIFYING if re.search(':disqualifying:', position_str) else QUALIFYING
+                        eligibility_type = QUALIFYING
                         Trials[ gene ][ map_mut(alteration_type) ][ call_context ][ pos ].append( {'trial_id': study,
                                                                                    'intervention': intervention,
                                                                                    'overall_status': overall_status,
@@ -559,16 +561,23 @@ def load_trials( Trials, trials_keyword, Gene_sets ):
                         if not len( position_str ):
                             abort_run('in trials input file: the position target is missing for trial={trial}' . format( trial=study ))
                         for pos in clean_split( position_str ):
+                            if re.search(':disqualifying:', pos):
+                                this_pos = pos.replace(':disqualifying:','')
+                                eligibility_type = DISQUALIFYING
+                            else:
+                                this_pos = pos
+                                eligibility_type = QUALIFYING
+
                             check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ], call_context, 'dict' )
-                            check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ][ call_context ], pos, 'list' )
-                            eligibility_type = DISQUALIFYING if re.search(':disqualifying:', pos) else QUALIFYING
-                            Trials[ gene ][ map_mut(alteration_type) ][ call_context ][ pos ].append( {'trial_id': study,
+                            check_alloc_named( Trials[ gene ][ map_mut(alteration_type) ][ call_context ], this_pos, 'list' )
+
+                            Trials[ gene ][ map_mut(alteration_type) ][ call_context ][ this_pos ].append( {'trial_id': study,
                                                                                        'intervention': intervention,
                                                                                        'overall_status': overall_status,
                                                                                        'phase': phase,
                                                                                        'completion_date': completion_date,
                                                                                        'study_completion_date': study_completion_date,
-                                                                                       'position_target': pos.replace(':disqualifying:',''),
+                                                                                       'position_target': this_pos,
                                                                                        'eligibility_type': eligibility_type,
                                                                                        'call_context': call_context,  # note: repeated info for later
                                                                                        })

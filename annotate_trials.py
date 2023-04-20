@@ -17,7 +17,7 @@ def evaluate_trials_wildtype( Trials, Genes_altered, Sample, Matches_trials, cal
         if gene not in Genes_altered.keys():  # wildtype genes in trials
             pos = 'none'
             if call_context in Trials[ gene ][ WILDTYPE ].keys():
-                if pos in Trials[ gene ][ WILDTYPE ][ call_context ].keys():
+                if pos in Trials[ gene ][ WILDTYPE ][ call_context ].keys():   # requires all WT-related info be mentioned in trials db
                     wt_seen.append( gene )
                     for t in Trials[ gene ][ WILDTYPE ][ call_context ][ pos ]:
                         check_alloc_named( Matches_trials, Sample, 'dict' )

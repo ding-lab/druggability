@@ -349,10 +349,7 @@ def map_maf_reverse( s ):
     return the_map[s]
 
 def list_disqualified_trials( disquals ):
-    mylist = []
-    for i in disquals:
-        mylist.append( disquals['trial_id'] )
-    return uniquify( mylist )
+    return uniquify([ i['trial_id'] for i in disquals ])
 
 def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
     for s in Matches:                  # legacy loop over samples
