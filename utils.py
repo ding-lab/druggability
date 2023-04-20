@@ -126,7 +126,7 @@ header_merged_list    = [ 'Sample_info', 'Called',  'DB_Original', 'DB_Liftover'
                           'Evidence_Level', 'Clinical_Significance',  'Citation']
 header_by_sample_list = [ 'Sample', 'Match_Index', 'Matched_Alteration', 'Match_Status', 'Criteria_Met',  'Source', 'Disease', 'Oncogenicity', 'Mutation_Effect', 'Treatment', 'Evidence_Type', 'Evidence_Direction',
                           'Evidence_Level', 'Clinical_Significance',  'Citation']
-header_aux_list       = [ 'Sample_info', 'Disease', 'Variant_class', 'Call_context', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status', 'Phase', 'Completion_date']
+header_aux_list       = [ 'Sample_info', 'Disease', 'Variant_class', 'Call_context', 'Gene', 'Position_target', 'Trial_id', 'Intervention', 'Overall_status', 'Phase', 'Primary_completion_date']
 
 def print_header( var_mode ):
     if var_mode in ['merged']:
