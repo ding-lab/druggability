@@ -76,15 +76,15 @@ def main( args ):
     call_context = ''
 
     # call main processing with QC of sample names detected
-    if args.variant_maf_file or args.variant_basicmaf_file:    # somatic maf
-        call_context = 'somatic'
-        process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, SampleMentioned, call_context, GenesSeenInTrials )
-        log_sample_mentioned( SampleMentioned, 'maf')
-
     if args.variant_fusion_file:   # somatic fusions
         call_context = 'somatic'
         process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Trials, Matches_trials, SampleMentioned, call_context, GenesSeenInTrials )
         log_sample_mentioned( SampleMentioned, 'fusion')
+
+    if args.variant_maf_file or args.variant_basicmaf_file:    # somatic maf
+        call_context = 'somatic'
+        process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, SampleMentioned, call_context, GenesSeenInTrials )
+        log_sample_mentioned( SampleMentioned, 'maf')
 
     # Process trials
     if args.annotate_trials:
