@@ -63,9 +63,8 @@ def get_maf_type( fields ):
             abort_run('Unrecognized maf format')
 
 
-# Process mafs
+# Process maf (or VCF)
 def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, SampleMentioned, call_context, GenesSeenInTrials ):
-    inputFile        = args.variant_maf_file if args.variant_maf_file else args.variant_basicmaf_file
     #Variant_tracking = dict()   # record variants by sample
     maf_filetype     = UNDECLARED
 
@@ -73,7 +72,7 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
     #bHasSampleMatch   = False
     SampleMentioned['maf'] = False
 
-    tsv_file = open( inputFile )
+    tsv_file = open( args.varInputFile )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
 
     # Set composite key for tracking matches
@@ -88,8 +87,16 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
         if bReadHeader:
             if row[0] == 'Hugo_Symbol':
                 maf_filetype = get_maf_type( fields )
-                logger.info( 'maf format recognized: {}'.format(map_maf_reverse(maf_filetype)) )
+            elif re.search(r'CHROM$', row[0]) and row[1:5] == ['POS','ID','REF','ALT']:
+                if row[5] == 'set':
+                    maf_filetype = CLINICAL_VCF
+                elif row[5:8] == ['QUAL','FILTER','INFO']:
+                    maf_filetype = BASIC_VCF
+
+            if maf_filetype != UNDECLARED:
+                logger.info( 'maf/vcf format recognized: {}'.format(map_maf_reverse(maf_filetype)) )
                 bReadHeader = False
+
             continue
 
         if maf_filetype == WASHU_MAF:
@@ -152,6 +159,52 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
             cdnachange   = fields[11]
             aachange     = fields[12]
 
+        if maf_filetype == CLINICAL_VCF:
+            gene         = fields[15]
+            ref_build    = 'ND'   # not in output records
+            chrom        = fields[ 0].replace('chr','')
+            pos_start    = fields[ 1]
+            maf_varclass = fields[14]
+            cdnachange   = fields[18].split(':')[1] if re.search(r'^ENST',fields[18]) else ''
+
+            ref = fields[ 3]
+            alt = fields[ 4]
+
+            # Calculated values
+            RL = len(ref)
+            AL = len(alt)
+            if RL == AL:   # xNP
+                pos_end = str( int(pos_start) + RL - 1 )
+                if RL < 4:
+                    vartype = [0,'SNP','DNP','TNP'][RL]
+                else:
+                    vartype = 'MNP'
+            elif RL < AL:
+                vartype = 'INS'
+                pos_end = str( int(pos_start) + 1 )
+            else:
+                vartype = 'DEL'
+                pos_end = str( int(pos_start) + RL - 1 )
+
+            protein_pos = fields[22]
+            somatic_aas = fields[23]
+            # Use amino acid field as protein position field may be nonempty/not useful
+            if len(somatic_aas):
+                tmp_aas = somatic_aas.split('/')
+                if len(tmp_aas) == 1:
+                    aachange = 'p.' + tmp_aas[0] + protein_pos + tmp_aas[0]
+                else:
+                    aachange = 'p.' + tmp_aas[0] + protein_pos + tmp_aas[1]
+            else:
+                aachange = ''
+
+            # The pipeline we are accessing does not include samples in its output records so just declare them
+            sample_t = args.tumor_name
+            sample_n = args.normal_name
+
+        if maf_filetype == BASIC_VCF:
+            abort_run('Standard vcf parsing not yet fully implemented')
+
 
         # Require samples to match
         if (sample_t != args.tumor_name)  or  (sample_n != args.normal_name):
@@ -168,7 +221,7 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
         # initially look at only vars with AA change in HGVS short format; if blank, it is often a splice site
         if not re.search( r'^p\.', aachange):
             if myglobal.DEBUG_2:
-                logger.info( 'maf record IGNORED: {}' . format(alteration_summary ))
+                logger.info( 'maf/vcf record IGNORED: {}' . format(alteration_summary ))
             continue
 
         # harmonize
@@ -319,4 +372,4 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
     tsv_file.close()
 
     if bReadHeader:
-        abort_run('Variant file {} is missing the header line' . format( inputFile ))
+        abort_run('Variant file {} is missing the header line' . format( args.varInputFile ))

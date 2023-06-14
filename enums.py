@@ -9,6 +9,8 @@ COMBINED   = 2    # aggregated report
 WASHU_MAF  = 1
 UNION_MAF  = 2
 BASIC_MAF  = 3
+BASIC_VCF  = 4
+CLINICAL_VCF = 5
 
 # variant classes
 WILDTYPE   = 0

@@ -7,9 +7,15 @@ import logging
 import datetime
 from enums import *
 import pandas as pd
-
+from argparse import Namespace
 logger = logging.getLogger(__name__)
 logger.setLevel(0)
+
+
+def namespace_append( ns, key, value):
+    my_dict = vars( ns )
+    my_dict[ key ] = value
+    return Namespace( **my_dict )
 
 def abort_run( msg ):
     logger.error( msg )
@@ -367,7 +373,7 @@ def map_mut_reverse( s ):
     return the_map[s]
 
 def map_maf_reverse( s ):
-    the_map = {WASHU_MAF: 'WASHU_MAF', UNION_MAF: 'UNION_MAF', BASIC_MAF: 'BASIC_MAF'}
+    the_map = {WASHU_MAF: 'WASHU_MAF', UNION_MAF: 'UNION_MAF', BASIC_MAF: 'BASIC_MAF', BASIC_VCF: 'BASIC_VCF', CLINICAL_VCF: 'CLINICAL_VCF'}
     return the_map[s]
 
 def list_disqualified_trials( disquals ):
@@ -386,7 +392,7 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
             orig_stdout = sys.stdout
             with open( args.output_file, 'w') as f:
                 sys.stdout = f
-                print_header( 'merged' if (args.variant_maf_file or args.variant_basicmaf_file or args.variant_fusion_file) else '' )
+                print_header( 'merged' if (args.variant_vcf_file or args.variant_maf_file or args.variant_basicmaf_file or args.variant_fusion_file) else '' )
                 sys.stdout = orig_stdout
                 logger.info('No matches to alteration db found!')
 

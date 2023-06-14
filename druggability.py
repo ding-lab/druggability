@@ -21,10 +21,13 @@ myglobal.DBPATH = os.path.join( os.path.dirname( os.path.abspath(__file__)), myg
 
 
 def log_sample_mentioned( SampleMentioned, key ):
+    report_key = key
+    if key == 'maf':
+        report_key = 'maf/vcf'  # adjustment
     if SampleMentioned[ key ]:
-        logger.info('Sample name was mentioned in the {} input file' . format(key))
+        logger.info('Sample name was mentioned in the {} input file' . format(report_key))
     else:
-        logger.info('WARNING: Sample name was NOT mentioned in the {} input file' . format(key))
+        logger.info('WARNING: Sample name was NOT mentioned in the {} input file' . format(report_key))
 
 def main( args ):
     Matches        = dict()   # alteration matches by sample, separated in 'full' and 'partial' match lists
@@ -81,10 +84,10 @@ def main( args ):
         process_fusions( args, Matches, Evidence, Variants, Genes, Genes_altered, Trials, Matches_trials, SampleMentioned, call_context, GenesSeenInTrials )
         log_sample_mentioned( SampleMentioned, 'fusion')
 
-    if args.variant_maf_file or args.variant_basicmaf_file:    # somatic maf
+    if args.varInputFile:       # somatic maf
         call_context = 'somatic'
         process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered, Trials, Matches_trials, SampleMentioned, call_context, GenesSeenInTrials )
-        log_sample_mentioned( SampleMentioned, 'maf')
+        log_sample_mentioned( SampleMentioned, 'maf')  # or VCF
 
     # Process trials
     if args.annotate_trials:
@@ -121,6 +124,7 @@ if __name__ == '__main__':
     parser.add_argument('-at', type=str, dest='annotate_trials', required=False, help='report clinical trials for this disease keyword', default='')
     parser.add_argument('-ato', dest='trials_auxiliary_output_file', type=str, required=False, help='clinical trials auxiliary output filename', default='trials.aux')
     parser.add_argument('--dump_trials_only', dest='b_dump_trials_only', action='store_true')
+    parser.add_argument('--vcf', dest='variant_vcf_file', type=str, required=False, help='variant file in VCF format (requirements: tumor and normal names)', default='')
     parser.add_argument('--maf', dest='variant_maf_file', type=str, required=False, help='variant file in maf format (requirements: tumor and normal names)', default='')
     parser.add_argument('--basicmaf', dest='variant_basicmaf_file', type=str, required=False, help='variant file in basic maf format (requirements: tumor and normal names)', default='')
     parser.add_argument('--fusion', dest='variant_fusion_file', type=str, required=False, help='variant file for fusions (requirement: tumor name)', default='')
@@ -141,12 +145,22 @@ if __name__ == '__main__':
     # Validate input
     if not len(sys.argv) > 1:
         parser.print_help()
-    if not ( args.variant_maf_file  or  args.variant_basicmaf_file  or  args.variant_fusion_file ):
-        abort_run('please specify a variant file')
-    if args.variant_maf_file  and  args.variant_basicmaf_file:
-        abort_run('please specify only one maf or basic maf variant file')
-    if (args.variant_maf_file  or  args.variant_basicmaf_file) and not (args.normal_name and args.tumor_name):
-        abort_run('tumor and normal sample names are required for maf-type input')
+    if not ( args.variant_vcf_file  or  args.variant_maf_file  or  args.variant_basicmaf_file  or  args.variant_fusion_file ):
+        abort_run('please specify at least one file with alterations')
+
+    varfileCount = 0
+    bHasVarfile  = False
+    varInputFile = ''
+    for varfile in [ args.variant_maf_file, args.variant_basicmaf_file, args.variant_vcf_file ]:
+        if varfile != '':
+            varfileCount += 1
+            args = namespace_append( args, 'varInputFile', varfile)   # save real filename
+    if varfileCount > 1:
+        abort_run('please specify at most one maf, basic maf, or VCF variant file')
+
+    if bHasVarfile and not (args.normal_name and args.tumor_name):
+        abort_run('tumor and normal sample names are required for maf or VCF input')
+
     if args.variant_fusion_file and not args.fusion_sample_name:
         abort_run('please specify fusion sample name')
 
@@ -172,6 +186,10 @@ if __name__ == '__main__':
     logger.info('log file={}'.format( args.log_file ))
     logger.info('debug flag count={}'.format( args.debug ))
 
+    if args.variant_vcf_file:
+        logger.info('variant file={} (VCF format)'.format( args.variant_vcf_file ))
+        logger.info('VCF tumor sample name={}'.format( args.tumor_name ))
+        logger.info('VCF normal sample name={}'.format( args.normal_name ))
     if args.variant_maf_file:
         logger.info('variant file={} (maf format)'.format( args.variant_maf_file ))
         logger.info('MAF tumor sample name={}'.format( args.tumor_name ))
