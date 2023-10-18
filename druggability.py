@@ -182,6 +182,7 @@ if __name__ == '__main__':
         abort_run('Python version 3.7.6 or higher is required')
 
     logger.info('command={}'.format( ' '.join( sys.argv )))
+    logger.info('tool version={} ({})' . format( *(version_info()) ))
     logger.info('output file={}'.format( args.output_file ))
     logger.info('log file={}'.format( args.log_file ))
     logger.info('debug flag count={}'.format( args.debug ))
