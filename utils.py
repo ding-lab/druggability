@@ -20,7 +20,7 @@ def version_info():
         if git_info_fields[i] == 'tag:':
             version_dat[0] = git_info_fields[i+1][0:len(git_info_fields[i+1])-1]
         elif git_info_fields[i] == 'commit':
-            version_dat[1] = git_info_fields[i+1][0:6]
+            version_dat[1] = git_info_fields[i+1][0:7]
     return version_dat
 
 def namespace_append( ns, key, value):
