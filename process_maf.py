@@ -70,7 +70,8 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
 
     bReadHeader      = True
     #bHasSampleMatch   = False
-    SampleMentioned['maf'] = False
+    #SampleMentioned['maf'] = False
+    logger.info('In process_maf: Sample mentioned = {}'. format(SampleMentioned['maf']))
 
     tsv_file = open( args.varInputFile )
     read_tsv = csv.reader(tsv_file, delimiter='\t')
@@ -98,6 +99,9 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
                 bReadHeader = False
 
             continue
+
+        if SampleMentioned['maf'] < 0:
+            SampleMentioned['maf'] = 0     # There is/are variants listed in input
 
         if maf_filetype == WASHU_MAF:
             gene         = fields[ 0]
@@ -210,7 +214,7 @@ def process_maf( args, Matches, Evidence, Variants, Genes, Fasta, Genes_altered,
         if (sample_t != args.tumor_name)  or  (sample_n != args.normal_name):
             continue
         #bHasSampleMatch = True
-        SampleMentioned['maf'] = True
+        SampleMentioned['maf'] = 1
 
         # Make a list of all genes in the maf
         Genes_altered[ gene ] = 1

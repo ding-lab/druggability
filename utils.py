@@ -391,6 +391,13 @@ def list_disqualified_trials( disquals ):
     return uniquify([ i['trial_id'] for i in disquals ])
 
 def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
+    logger.info('in print summary for all:  num = {}' . format(len(Matches)))
+
+    # Print header in case no matches
+    with open( args.trials_auxiliary_output_file, 'w') as fp:
+        fp.write( '\t'.join( header_aux_list ) )
+        fp.write( '\n' )
+
     for s in Matches:                  # legacy loop over samples
         altmatch_output_lines = []     # output for raw matches to "alt"erations
 
@@ -446,4 +453,4 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
             # use pandas to prepare output
             df = pd.DataFrame( aux_output_lines, columns = header_aux_list )
             df = condense_trials_output( df )
-            df.to_csv( args.trials_auxiliary_output_file, sep = '\t', header=True, index=False)
+            df.to_csv( args.trials_auxiliary_output_file, sep = '\t', header=False, index=False, mode='a')

@@ -21,13 +21,16 @@ myglobal.DBPATH = os.path.join( os.path.dirname( os.path.abspath(__file__)), myg
 
 
 def log_sample_mentioned( SampleMentioned, key ):
+    print('Sample menioned = {}' . format( SampleMentioned[ key ]))
     report_key = key
     if key == 'maf':
         report_key = 'maf/vcf'  # adjustment
-    if SampleMentioned[ key ]:
+    if SampleMentioned[ key ] > 0:
         logger.info('Sample name was mentioned in the {} input file' . format(report_key))
-    else:
+    elif SampleMentioned[ key ] == 0:
         logger.info('WARNING: Sample name was NOT mentioned in the {} input file' . format(report_key))
+    else:
+        logger.info('WARNING: Sample name was NOT mentioned in the {} input file because there were no variants' . format(report_key))
 
 def main( args ):
     Matches        = dict()   # alteration matches by sample, separated in 'full' and 'partial' match lists
@@ -68,7 +71,8 @@ def main( args ):
         GenesSeenInTrials[ alt_type ] = []
     GenesSeenInTrials['all_types'] = []    # one-off key to store merged list of all genes
 
-    SampleMentioned = {'maf': False, 'fusion': False}
+    # uses 0/1 for false/true, -1 means no calls
+    SampleMentioned = {'maf': -1, 'fusion': -1}
 
     if args.annotate_trials:
         # Use of a key for sample is legacy; use generic name to enable merging of modalities
@@ -94,8 +98,9 @@ def main( args ):
         evaluate_gene_trials_hits( args, Trials, Genes_altered, SAMPLENAME, Matches_trials, call_context, GenesSeenInTrials )
         # Evaluate trial disqualifications
         Matches_trials[ SAMPLENAME ][ DISQUALIFYING ] = []
-        if 'maf' in SampleMentioned.keys() or 'fusion' in SampleMentioned.keys():
-            evaluate_trials_disqualifications( Matches_trials )
+        #if 'maf' in SampleMentioned.keys() or 'fusion' in SampleMentioned.keys():
+        #    evaluate_trials_disqualifications( Matches_trials )
+        evaluate_trials_disqualifications( Matches_trials )
 
 
     # Report results
