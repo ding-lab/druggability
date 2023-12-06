@@ -21,7 +21,7 @@ myglobal.DBPATH = os.path.join( os.path.dirname( os.path.abspath(__file__)), myg
 
 
 def log_sample_mentioned( SampleMentioned, key ):
-    print('Sample menioned = {}' . format( SampleMentioned[ key ]))
+    print('Sample mentioned = {}' . format( SampleMentioned[ key ]))
     report_key = key
     if key == 'maf':
         report_key = 'maf/vcf'  # adjustment
@@ -212,8 +212,8 @@ if __name__ == '__main__':
     logger.info('civic liftover={}'.format( config.civic_params['ref_build_liftover'] ))
 
     if args.annotate_trials:
-        logger.info('clincal trials disease search={}'.format( args.annotate_trials ))
-        logger.info('clincal trials access date={}'.format( config.trials_files[ args.annotate_trials ]['accessed'] ))
+        logger.info('clinical trials disease search={}'.format( args.annotate_trials ))
+        logger.info('clinical trials access date={}'.format( config.trials_files[ args.annotate_trials ]['accessed'] ))
         logger.info('Dump trials only={}'.format( args.b_dump_trials_only ))
 
     # Run
