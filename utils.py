@@ -398,6 +398,10 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
         fp.write( '\t'.join( header_aux_list ) )
         fp.write( '\n' )
 
+    with open( args.output_file, 'w') as fp:
+        fp.write( '\t'.join(header_merged_list ) )
+        fp.write( '\n' )
+
     for s in Matches:                  # legacy loop over samples
         altmatch_output_lines = []     # output for raw matches to "alt"erations
 
@@ -407,12 +411,7 @@ def print_summary_for_all( args, Matches, Variants, Evidence, Matches_trials ):
             num_results += len(Matches[s][matchtype])
 
         if num_results == 0:
-            orig_stdout = sys.stdout
-            with open( args.output_file, 'w') as f:
-                sys.stdout = f
-                print_header( 'merged' if (args.variant_vcf_file or args.variant_maf_file or args.variant_basicmaf_file or args.variant_fusion_file) else '' )
-                sys.stdout = orig_stdout
-                logger.info('No matches to alteration db found!')
+            logger.info('No matches to alteration db found!')
 
         else:
             match_idx = 0
